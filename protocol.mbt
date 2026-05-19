@@ -3,7 +3,7 @@ type Handler = (Json?) -> Result[Json, RpcError]
 
 ///|
 /// Parsed request data used internally by the dispatcher.
-pub(all) struct Request {
+struct Request {
   id : Json?
   rpc_method : String
   params : Json?

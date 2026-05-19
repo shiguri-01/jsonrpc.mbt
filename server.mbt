@@ -1,6 +1,6 @@
 ///|
 /// Transport-agnostic JSON-RPC 2.0 request dispatcher.
-pub(all) struct Server {
+pub struct Server {
   handlers : Map[String, Handler]
 }
 

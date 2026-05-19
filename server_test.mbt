@@ -56,6 +56,36 @@ test "method not found is a standard error" {
 }
 
 ///|
+test "handler can return invalid params" {
+  let server = Server::new().register("add", add_handler).unwrap()
+  let request =
+    #|{"jsonrpc":"2.0","method":"add","params":{"left":1},"id":1}
+  let response = response_json(server, request)
+  guard response is Object(obj) else { fail("response must be an object") }
+  guard obj.get("error") is Some(Object(error)) else {
+    fail("response must include error")
+  }
+  guard error.get("code") is Some(Number(-32602.0, ..)) else {
+    fail("error code must be invalid params")
+  }
+  guard obj.get("id") is Some(Number(1.0, ..)) else { fail("id must be 1") }
+}
+
+///|
+test "empty batch is invalid request" {
+  let server = Server::new()
+  let response = response_json(server, "[]")
+  guard response is Object(obj) else { fail("response must be an object") }
+  guard obj.get("error") is Some(Object(error)) else {
+    fail("response must include error")
+  }
+  guard error.get("code") is Some(Number(-32600.0, ..)) else {
+    fail("error code must be invalid request")
+  }
+  guard obj.get("id") is Some(Null) else { fail("id must be null") }
+}
+
+///|
 test "batch omits notification responses" {
   let server = Server::new().register("add", add_handler).unwrap()
   let request =
