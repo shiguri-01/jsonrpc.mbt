@@ -15,6 +15,54 @@ fn add_handler(params : Json?) -> Result[Json, RpcError] {
 }
 
 ///|
+fn subtract_handler(params : Json?) -> Result[Json, RpcError] {
+  match params {
+    Some(Array([Number(minuend, ..), Number(subtrahend, ..)])) =>
+      Ok(Json::number(minuend - subtrahend))
+    Some(Object(obj)) =>
+      match (obj.get("minuend"), obj.get("subtrahend")) {
+        (Some(Number(minuend, ..)), Some(Number(subtrahend, ..))) =>
+          Ok(Json::number(minuend - subtrahend))
+        _ => Err(invalid_params())
+      }
+    _ => Err(invalid_params())
+  }
+}
+
+///|
+fn update_handler(_params : Json?) -> Result[Json, RpcError] {
+  Ok(null)
+}
+
+///|
+fn foobar_handler(_params : Json?) -> Result[Json, RpcError] {
+  Ok(Json::string("ignored"))
+}
+
+///|
+fn spec_server() -> Server {
+  Server::new()
+  .register("subtract", subtract_handler)
+  .unwrap()
+  .register("update", update_handler)
+  .unwrap()
+  .register("foobar", foobar_handler)
+  .unwrap()
+}
+
+///|
+fn assert_error_code(response : Json, code : Double) -> Unit raise {
+  guard response is Object(obj) else { fail("response must be an object") }
+  guard obj.get("error") is Some(Object(error)) else {
+    fail("response must include error")
+  }
+  guard error.get("code") is Some(Number(actual, ..)) else {
+    fail("unexpected error code")
+  }
+  guard actual == code else { fail("unexpected error code") }
+}
+
+///|
 test "single request returns result" {
   let server = Server::new().register("add", add_handler).unwrap()
   let request =
@@ -114,4 +162,140 @@ test "parse error uses null id" {
     fail("error code must be parse error")
   }
   guard obj.get("id") is Some(Null) else { fail("id must be null") }
+}
+
+///|
+test "spec example positional params order one" {
+  let request =
+    #|{"jsonrpc":"2.0","method":"subtract","params":[42,23],"id":1}
+  let response = response_json(spec_server(), request)
+  guard response is Object(obj) else { fail("response must be an object") }
+  guard obj.get("result") is Some(Number(19.0, ..)) else {
+    fail("result must be 19")
+  }
+  guard obj.get("id") is Some(Number(1.0, ..)) else { fail("id must be 1") }
+}
+
+///|
+test "spec example positional params order two" {
+  let request =
+    #|{"jsonrpc":"2.0","method":"subtract","params":[23,42],"id":2}
+  let response = response_json(spec_server(), request)
+  guard response is Object(obj) else { fail("response must be an object") }
+  guard obj.get("result") is Some(Number(-19.0, ..)) else {
+    fail("result must be -19")
+  }
+  guard obj.get("id") is Some(Number(2.0, ..)) else { fail("id must be 2") }
+}
+
+///|
+test "spec example named params order one" {
+  let request =
+    #|{"jsonrpc":"2.0","method":"subtract","params":{"subtrahend":23,"minuend":42},"id":3}
+  let response = response_json(spec_server(), request)
+  guard response is Object(obj) else { fail("response must be an object") }
+  guard obj.get("result") is Some(Number(19.0, ..)) else {
+    fail("result must be 19")
+  }
+  guard obj.get("id") is Some(Number(3.0, ..)) else { fail("id must be 3") }
+}
+
+///|
+test "spec example named params order two" {
+  let request =
+    #|{"jsonrpc":"2.0","method":"subtract","params":{"minuend":42,"subtrahend":23},"id":4}
+  let response = response_json(spec_server(), request)
+  guard response is Object(obj) else { fail("response must be an object") }
+  guard obj.get("result") is Some(Number(19.0, ..)) else {
+    fail("result must be 19")
+  }
+  guard obj.get("id") is Some(Number(4.0, ..)) else { fail("id must be 4") }
+}
+
+///|
+test "spec notification examples return no response" {
+  let server = spec_server()
+  let one =
+    #|{"jsonrpc":"2.0","method":"update","params":[1,2,3,4,5]}
+  let two =
+    #|{"jsonrpc":"2.0","method":"foobar"}
+  guard server.handle_text(one) is None else {
+    fail("update notification must not respond")
+  }
+  guard server.handle_text(two) is None else {
+    fail("foobar notification must not respond")
+  }
+}
+
+///|
+test "invalid request shapes use invalid request error" {
+  let server = spec_server()
+  let invalid_method =
+    #|{"jsonrpc":"2.0","method":1,"params":"bar"}
+  let invalid_params_member =
+    #|{"jsonrpc":"2.0","method":"foobar","params":"bar","id":1}
+  let invalid_id =
+    #|{"jsonrpc":"2.0","method":"foobar","id":[]}
+  let invalid_version =
+    #|{"jsonrpc":"1.0","method":"foobar","id":1}
+  assert_error_code(response_json(server, invalid_method), -32600.0)
+  assert_error_code(response_json(server, invalid_params_member), -32600.0)
+  assert_error_code(response_json(server, invalid_id), -32600.0)
+  assert_error_code(response_json(server, invalid_version), -32600.0)
+}
+
+///|
+test "batch with all invalid non-object entries returns one error per entry" {
+  let response = response_json(spec_server(), "[1,2,3]")
+  guard response is Array(items) else { fail("response must be an array") }
+  guard items.length() == 3 else { fail("response count must be 3") }
+  assert_error_code(items[0], -32600.0)
+  assert_error_code(items[1], -32600.0)
+  assert_error_code(items[2], -32600.0)
+}
+
+///|
+test "batch of only notifications returns no response" {
+  let request =
+    #|[
+    #|  {"jsonrpc":"2.0","method":"update","params":[1,2,3,4,5]},
+    #|  {"jsonrpc":"2.0","method":"foobar"}
+    #|]
+  guard spec_server().handle_text(request) is None else {
+    fail("notification-only batch must not respond")
+  }
+}
+
+///|
+test "batch with invalid entries returns ordered call and error responses" {
+  let request =
+    #|[
+    #|  {"jsonrpc":"2.0","method":"subtract","params":[42,23],"id":1},
+    #|  {"jsonrpc":"2.0","method":"missing","id":2},
+    #|  {"jsonrpc":"2.0","method":"foobar"},
+    #|  {"foo":"boo"},
+    #|  {"jsonrpc":"2.0","method":"subtract","params":[23,42],"id":3}
+    #|]
+  let response = response_json(spec_server(), request)
+  guard response is Array(items) else { fail("response must be an array") }
+  guard items.length() == 4 else { fail("batch response count must be 4") }
+  guard items[0] is Object(first) else { fail("first response must be object") }
+  guard first.get("result") is Some(Number(19.0, ..)) else {
+    fail("first result must be 19")
+  }
+  assert_error_code(items[1], -32601.0)
+  assert_error_code(items[2], -32600.0)
+  guard items[3] is Object(last) else { fail("last response must be object") }
+  guard last.get("result") is Some(Number(-19.0, ..)) else {
+    fail("last result must be -19")
+  }
+}
+
+///|
+test "reserved rpc prefix cannot be registered" {
+  let result = Server::new().register("rpc.discover", foobar_handler)
+  guard result is Err(error) else { fail("reserved method must be rejected") }
+  guard error.code == invalid_request_code else {
+    fail("reserved method must use invalid request code")
+  }
 }

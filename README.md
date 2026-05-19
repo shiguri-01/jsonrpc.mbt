@@ -13,8 +13,21 @@ application state stay outside the core dispatcher.
 - Single request, notification, and batch handling.
 - Standard error codes: parse error, invalid request, method not found, invalid
   params, and internal error.
-- Handler API built around `Json? -> Result[Json, RpcError]`.
+- Handler API built around the public `Handler` alias:
+  `Json? -> Result[Json, RpcError]`.
 - Notification-only requests return `None` instead of an empty response.
+
+## Public API
+
+- `Server::new()`: create an empty dispatcher.
+- `Server::register(name, handler)`: register a method. Names starting with
+  `rpc.` are rejected because JSON-RPC reserves that prefix.
+- `Server::handle_text(input)`: parse and dispatch one JSON document, returning
+  `Some(response)` or `None` for notifications.
+- `Server::handle_json(value)`: dispatch an already parsed JSON value.
+- `RpcError::new(code, message)` and `RpcError::with_data(...)`: return method
+  errors from handlers.
+- `invalid_params()` and `internal_error()`: helpers for common handler errors.
 
 ## Development
 
@@ -36,7 +49,7 @@ nix run github:moonbit-community/moonbit-overlay#moon -- test
 
 ```moonbit
 fn echo(params : Json?) -> Result[Json, @rpc.RpcError] {
-  Ok(params.unwrap_or(Null))
+  Ok(params.unwrap_or(null))
 }
 
 let server = @rpc.Server::new()

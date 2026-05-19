@@ -1,7 +1,7 @@
 ///|
 /// Transport-agnostic JSON-RPC 2.0 request dispatcher.
 pub struct Server {
-  handlers : Map[String, Handler]
+  priv handlers : Map[String, Handler]
 }
 
 ///|

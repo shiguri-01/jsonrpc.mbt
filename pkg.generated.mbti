@@ -1,0 +1,49 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "shiguri/jsonrpc"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn internal_error(message? : String) -> RpcError
+
+pub let internal_error_code : Int
+
+pub fn invalid_params(message? : String) -> RpcError
+
+pub let invalid_params_code : Int
+
+pub let invalid_request_code : Int
+
+pub let method_not_found_code : Int
+
+pub let parse_error_code : Int
+
+// Errors
+
+// Types and methods
+type Request derive(Eq, @debug.Debug)
+
+pub(all) struct RpcError {
+  code : Int
+  message : String
+  data : Json?
+} derive(Eq, @debug.Debug)
+pub fn RpcError::new(Int, String) -> Self
+pub fn RpcError::to_json(Self) -> Json
+pub fn RpcError::with_data(Int, String, Json) -> Self
+
+pub struct Server {
+  // private fields
+}
+pub fn Server::handle_json(Self, Json) -> Json?
+pub fn Server::handle_text(Self, String) -> String?
+pub fn Server::new() -> Self
+pub fn Server::register(Self, String, (Json?) -> Result[Json, RpcError]) -> Result[Self, RpcError]
+
+// Type aliases
+pub type Handler = (Json?) -> Result[Json, RpcError]
+
+// Traits
+
