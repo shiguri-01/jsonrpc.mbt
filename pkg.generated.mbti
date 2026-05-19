@@ -25,6 +25,8 @@ pub let parse_error_code : Int
 // Types and methods
 type Request derive(Eq, @debug.Debug)
 
+type RequestError derive(Eq, @debug.Debug)
+
 pub(all) struct RpcError {
   code : Int
   message : String

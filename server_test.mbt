@@ -231,17 +231,45 @@ test "spec notification examples return no response" {
 test "invalid request shapes use invalid request error" {
   let server = spec_server()
   let invalid_method =
-    #|{"jsonrpc":"2.0","method":1,"params":"bar"}
+    #|{"jsonrpc":"2.0","method":1,"params":"bar","id":1}
   let invalid_params_member =
-    #|{"jsonrpc":"2.0","method":"foobar","params":"bar","id":1}
+    #|{"jsonrpc":"2.0","method":"foobar","params":"bar","id":2}
   let invalid_id =
     #|{"jsonrpc":"2.0","method":"foobar","id":[]}
   let invalid_version =
-    #|{"jsonrpc":"1.0","method":"foobar","id":1}
-  assert_error_code(response_json(server, invalid_method), -32600.0)
-  assert_error_code(response_json(server, invalid_params_member), -32600.0)
-  assert_error_code(response_json(server, invalid_id), -32600.0)
-  assert_error_code(response_json(server, invalid_version), -32600.0)
+    #|{"jsonrpc":"1.0","method":"foobar","id":3}
+  let invalid_method_response = response_json(server, invalid_method)
+  let invalid_params_response = response_json(server, invalid_params_member)
+  let invalid_id_response = response_json(server, invalid_id)
+  let invalid_version_response = response_json(server, invalid_version)
+  assert_error_code(invalid_method_response, -32600.0)
+  assert_error_code(invalid_params_response, -32600.0)
+  assert_error_code(invalid_id_response, -32600.0)
+  assert_error_code(invalid_version_response, -32600.0)
+  guard invalid_method_response is Object(method_obj) else {
+    fail("response must be object")
+  }
+  guard invalid_params_response is Object(params_obj) else {
+    fail("response must be object")
+  }
+  guard invalid_id_response is Object(id_obj) else {
+    fail("response must be object")
+  }
+  guard invalid_version_response is Object(version_obj) else {
+    fail("response must be object")
+  }
+  guard method_obj.get("id") is Some(Number(1.0, ..)) else {
+    fail("invalid method response must preserve id")
+  }
+  guard params_obj.get("id") is Some(Number(2.0, ..)) else {
+    fail("invalid params member response must preserve id")
+  }
+  guard id_obj.get("id") is Some(Null) else {
+    fail("invalid id response must use null id")
+  }
+  guard version_obj.get("id") is Some(Number(3.0, ..)) else {
+    fail("invalid version response must preserve id")
+  }
 }
 
 ///|
@@ -297,5 +325,15 @@ test "reserved rpc prefix cannot be registered" {
   guard result is Err(error) else { fail("reserved method must be rejected") }
   guard error.code == invalid_request_code else {
     fail("reserved method must use invalid request code")
+  }
+}
+
+///|
+test "duplicate method registration is rejected" {
+  let server = Server::new().register("echo", foobar_handler).unwrap()
+  let result = server.register("echo", foobar_handler)
+  guard result is Err(error) else { fail("duplicate method must be rejected") }
+  guard error.code == invalid_request_code else {
+    fail("duplicate method must use invalid request code")
   }
 }

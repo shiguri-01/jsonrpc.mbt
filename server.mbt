@@ -27,6 +27,9 @@ pub fn Server::register(
       ),
     )
   }
+  if self.handlers.get(name) is Some(_) {
+    return Err(RpcError::new(invalid_request_code, "Method already registered"))
+  }
   self.handlers[name] = handler
   Ok(self)
 }
@@ -78,7 +81,8 @@ fn Server::handle_batch(self : Server, items : Array[Json]) -> Json? {
 fn Server::handle_one(self : Server, value : Json) -> Json? {
   let request = match parse_request(value) {
     Ok(request) => request
-    Err(error) => return Some(unknown_id_error(error))
+    Err(error) =>
+      return Some(error_response(error.id.unwrap_or(null), error.error))
   }
   let id = request.id.unwrap_or(null)
   let handler = match self.handlers.get(request.rpc_method) {

@@ -21,7 +21,8 @@ application state stay outside the core dispatcher.
 
 - `Server::new()`: create an empty dispatcher.
 - `Server::register(name, handler)`: register a method. Names starting with
-  `rpc.` are rejected because JSON-RPC reserves that prefix.
+  `rpc.` are rejected because JSON-RPC reserves that prefix, and duplicate
+  names are rejected to avoid accidental handler replacement.
 - `Server::handle_text(input)`: parse and dispatch one JSON document, returning
   `Some(response)` or `None` for notifications.
 - `Server::handle_json(value)`: dispatch an already parsed JSON value.
@@ -68,6 +69,8 @@ See [cmd/example/main.mbt](cmd/example/main.mbt) for a runnable example.
 JSON-RPC 2.0 is transport agnostic. A request object must include
 `"jsonrpc": "2.0"` and a string `method`; `params`, when present, must be an
 array or object; and a request without `id` is a notification. Notifications do
-not receive responses, including when they appear inside a batch.
+not receive responses, including when they appear inside a batch. Error
+responses preserve a valid request `id` when one can be detected; parse errors
+and invalid ids use `null`.
 
 The official specification is published at <https://www.jsonrpc.org/specification>.
