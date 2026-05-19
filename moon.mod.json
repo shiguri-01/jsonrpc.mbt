@@ -1,0 +1,10 @@
+{
+  "name": "shiguri/jsonrpc",
+  "version": "0.1.0",
+  "readme": "README.md",
+  "repository": "https://github.com/shiguri-01/jsonrpc.mbt",
+  "license": "Apache-2.0",
+  "keywords": ["json-rpc", "jsonrpc", "rpc", "server"],
+  "description": "A small, transport-agnostic JSON-RPC 2.0 server library.",
+  "preferred-target": "wasm-gc"
+}

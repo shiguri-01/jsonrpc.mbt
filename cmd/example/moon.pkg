@@ -1,0 +1,7 @@
+import {
+  "shiguri/jsonrpc" @rpc,
+}
+
+options(
+  is_main: true,
+)
