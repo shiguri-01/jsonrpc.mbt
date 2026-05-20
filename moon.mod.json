@@ -6,6 +6,9 @@
   "license": "Apache-2.0",
   "keywords": ["json-rpc", "jsonrpc", "rpc", "server"],
   "description": "A small, transport-agnostic JSON-RPC 2.0 server library.",
+  "deps": {
+    "moonbitlang/async": "0.17.0"
+  },
   "source": "src",
   "preferred-target": "wasm-gc"
 }

@@ -30,6 +30,18 @@ application state stay outside the core dispatcher.
   errors from handlers.
 - `invalid_params()` and `internal_error()`: helpers for common handler errors.
 
+## Optional Packages
+
+The core package stays small. Extra packages compose through `Handler` and
+`Server` without adding transport, context, or typed params concepts to the core.
+
+- `shiguri/jsonrpc/typed`: decoder helpers for turning `Json?` params into
+  typed MoonBit values before running a handler.
+- `shiguri/jsonrpc/context`: adapters for binding application state or request
+  metadata to a normal core `Handler`.
+- `shiguri/jsonrpc/stdio`: native-only newline-delimited stdin/stdout transport
+  for quick CLIs and editor-style subprocesses.
+
 ## Development
 
 This repository uses Nix flakes and the community MoonBit overlay:
@@ -37,6 +49,7 @@ This repository uses Nix flakes and the community MoonBit overlay:
 ```sh
 nix develop
 moon test
+moon check --target native --warn-list +73
 moon run src/cmd/example
 ```
 
@@ -63,6 +76,38 @@ let response = server.handle_text(
 ```
 
 See [src/cmd/example/main.mbt](src/cmd/example/main.mbt) for a runnable example.
+
+## Typed Params
+
+Use `typed` when a method has a stable params shape and you want to keep
+validation boilerplate out of business logic:
+
+```moonbit
+fn add(pair : (Double, Double)) -> Result[Json, @rpc.RpcError] {
+  let (a, b) = pair
+  Ok(Json::number(a + b))
+}
+
+let handler = @typed.handler(@typed.array2(@typed.number, @typed.number), add)
+```
+
+## Context
+
+Use `context` when a method needs application state. The core `Server` still
+receives a plain `Handler`.
+
+```moonbit
+let handler = @context.bind(app_state, method_using_state)
+```
+
+## Stdio
+
+`stdio` treats each non-empty input line as one complete JSON-RPC document and
+writes each response as one output line. Notifications produce no output.
+
+```sh
+moon run --target native src/cmd/stdio-example
+```
 
 ## Spec Notes
 

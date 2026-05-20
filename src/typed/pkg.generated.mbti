@@ -1,0 +1,31 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "shiguri/jsonrpc/typed"
+
+import {
+  "shiguri/jsonrpc",
+}
+
+// Values
+pub fn[A, B] array2((Json) -> Result[A, @jsonrpc.RpcError], (Json) -> Result[B, @jsonrpc.RpcError]) -> (Json?) -> Result[(A, B), @jsonrpc.RpcError]
+
+pub fn[A] field(String, (Json) -> Result[A, @jsonrpc.RpcError]) -> (Map[String, Json]) -> Result[A, @jsonrpc.RpcError]
+
+pub fn[A] handler((Json?) -> Result[A, @jsonrpc.RpcError], (A) -> Result[Json, @jsonrpc.RpcError]) -> (Json?) -> Result[Json, @jsonrpc.RpcError]
+
+pub fn number(Json) -> Result[Double, @jsonrpc.RpcError]
+
+pub fn[A, B] object2(String, (Json) -> Result[A, @jsonrpc.RpcError], String, (Json) -> Result[B, @jsonrpc.RpcError]) -> (Json?) -> Result[(A, B), @jsonrpc.RpcError]
+
+pub fn[A] params((Json) -> Result[A, @jsonrpc.RpcError]) -> (Json?) -> Result[A, @jsonrpc.RpcError]
+
+pub fn string(Json) -> Result[String, @jsonrpc.RpcError]
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+pub type Decoder[A] = (Json?) -> Result[A, @jsonrpc.RpcError]
+
+// Traits
+

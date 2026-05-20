@@ -1,0 +1,22 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@v17
+      - name: Check flake
+        run: nix flake check
+      - name: Build package
+        run: nix build .
+      - name: Check MoonBit
+        run: nix run github:moonbit-community/moonbit-overlay#moon -- check --warn-list +73
+      - name: Test MoonBit
+        run: nix run github:moonbit-community/moonbit-overlay#moon -- test
+      - name: Check native stdio package
+        run: nix run github:moonbit-community/moonbit-overlay#moon -- check --target native --warn-list +73

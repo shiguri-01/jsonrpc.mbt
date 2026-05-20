@@ -1,0 +1,21 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "shiguri/jsonrpc/context"
+
+import {
+  "shiguri/jsonrpc",
+}
+
+// Values
+pub fn[C] bind(C, (C, Json?) -> Result[Json, @jsonrpc.RpcError]) -> (Json?) -> Result[Json, @jsonrpc.RpcError]
+
+pub fn[C] register(@jsonrpc.Server, String, C, (C, Json?) -> Result[Json, @jsonrpc.RpcError]) -> Result[@jsonrpc.Server, @jsonrpc.RpcError]
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+pub type Handler[C] = (C, Json?) -> Result[Json, @jsonrpc.RpcError]
+
+// Traits
+
