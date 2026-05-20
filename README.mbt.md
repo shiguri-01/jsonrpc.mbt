@@ -42,6 +42,23 @@ The core package stays small. Extra packages compose through `Handler` and
 - `shiguri/jsonrpc/stdio`: native-only newline-delimited stdin/stdout transport
   for quick CLIs and editor-style subprocesses.
 
+## Import Paths and Aliases
+
+Use quoted package paths in `moon.pkg`, then call them through `@alias` in
+MoonBit code. Do not write `@shiguri/jsonrpc`; `@` applies to the local alias,
+not to the package path.
+
+```moonbit
+import {
+  "shiguri/jsonrpc" @rpc,
+  "shiguri/jsonrpc/typed" @typed,
+  "shiguri/jsonrpc/context" @context,
+}
+```
+
+After that, code uses aliases such as `@rpc.Server::new()`,
+`@typed.handler(...)`, and `@context.bind(...)`.
+
 ## Development
 
 This repository uses Nix flakes and the community MoonBit overlay:
