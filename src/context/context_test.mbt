@@ -17,8 +17,9 @@ fn prefixed_echo(
 
 ///|
 test "bind adapts context handler to core handler" {
+  let prefix : Prefix = { value: "hi " }
   let server = @rpc.Server::new()
-    .register("echo", bind({ value: "hi " }, prefixed_echo))
+    .register("echo", bind(prefix, prefixed_echo))
     .unwrap()
   let request =
     #|{"jsonrpc":"2.0","method":"echo","params":["there"],"id":1}
@@ -33,12 +34,8 @@ test "bind adapts context handler to core handler" {
 
 ///|
 test "register adds context handler to server" {
-  let server = register(
-    @rpc.Server::new(),
-    "echo",
-    { value: "ctx:" },
-    prefixed_echo,
-  ).unwrap()
+  let prefix : Prefix = { value: "ctx:" }
+  let server = register(@rpc.Server::new(), "echo", prefix, prefixed_echo).unwrap()
   let request =
     #|{"jsonrpc":"2.0","method":"echo","params":["ok"],"id":1}
   let response = server.handle_text(request)
