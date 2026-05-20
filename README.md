@@ -37,7 +37,7 @@ This repository uses Nix flakes and the community MoonBit overlay:
 ```sh
 nix develop
 moon test
-moon run cmd/example
+moon run src/cmd/example
 ```
 
 You can also run MoonBit directly through the overlay:
@@ -62,7 +62,7 @@ let response = server.handle_text(
 )
 ```
 
-See [cmd/example/main.mbt](cmd/example/main.mbt) for a runnable example.
+See [src/cmd/example/main.mbt](src/cmd/example/main.mbt) for a runnable example.
 
 ## Spec Notes
 
