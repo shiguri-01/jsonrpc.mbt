@@ -1,3 +1,7 @@
 import {
   "moonbitlang/core/json" @json,
 }
+
+options(
+  "native-stub": [ "native_stub.c" ],
+)
