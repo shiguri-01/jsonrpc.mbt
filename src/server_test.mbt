@@ -40,6 +40,17 @@ fn foobar_handler(_params : Json?) -> Result[Json, RpcError] {
 }
 
 ///|
+fn unavailable_handler(_params : Json?) -> Result[Json, RpcError] {
+  Err(
+    RpcError::with_data(
+      -32042,
+      "Temporarily unavailable",
+      Json::string("retry later"),
+    ),
+  )
+}
+
+///|
 fn spec_server() -> Server {
   Server::new()
   .register("subtract", subtract_handler)
@@ -162,6 +173,57 @@ test "parse error uses null id" {
     fail("error code must be parse error")
   }
   guard obj.get("id") is Some(Null) else { fail("id must be null") }
+}
+
+///|
+test "request id null is a call id and is preserved" {
+  let server = Server::new().register("add", add_handler).unwrap()
+  let request =
+    #|{"jsonrpc":"2.0","method":"add","params":[2,3],"id":null}
+  let response = response_json(server, request)
+  guard response is Object(obj) else { fail("response must be an object") }
+  guard obj.get("result") is Some(Number(5.0, ..)) else {
+    fail("result must be 5")
+  }
+  guard obj.get("id") is Some(Null) else { fail("id must be null") }
+}
+
+///|
+test "fractional number id is accepted and preserved" {
+  let server = Server::new().register("add", add_handler).unwrap()
+  let request =
+    #|{"jsonrpc":"2.0","method":"add","params":[2,3],"id":1.5}
+  let response = response_json(server, request)
+  guard response is Object(obj) else { fail("response must be an object") }
+  guard obj.get("result") is Some(Number(5.0, ..)) else {
+    fail("result must be 5")
+  }
+  guard obj.get("id") is Some(Number(1.5, ..)) else {
+    fail("fractional id must be preserved")
+  }
+}
+
+///|
+test "handler user-defined error code is preserved" {
+  let server = Server::new()
+    .register("unavailable", unavailable_handler)
+    .unwrap()
+  let request =
+    #|{"jsonrpc":"2.0","method":"unavailable","id":"call-1"}
+  let response = response_json(server, request)
+  guard response is Object(obj) else { fail("response must be an object") }
+  guard obj.get("error") is Some(Object(error)) else {
+    fail("response must include error")
+  }
+  guard error.get("code") is Some(Number(-32042.0, ..)) else {
+    fail("user-defined error code must be preserved")
+  }
+  guard error.get("data") is Some(String("retry later")) else {
+    fail("user-defined error data must be preserved")
+  }
+  guard obj.get("id") is Some(String("call-1")) else {
+    fail("id must be preserved")
+  }
 }
 
 ///|
@@ -335,5 +397,22 @@ test "duplicate method registration is rejected" {
   guard result is Err(error) else { fail("duplicate method must be rejected") }
   guard error.code == invalid_request_code else {
     fail("duplicate method must use invalid request code")
+  }
+}
+
+///|
+test "register returns a new server and leaves the original unchanged" {
+  let original = Server::new()
+  let registered = original.register("echo", foobar_handler).unwrap()
+  let request =
+    #|{"jsonrpc":"2.0","method":"echo","id":1}
+  let original_response = response_json(original, request)
+  let registered_response = response_json(registered, request)
+  assert_error_code(original_response, -32601.0)
+  guard registered_response is Object(obj) else {
+    fail("response must be an object")
+  }
+  guard obj.get("result") is Some(String("ignored")) else {
+    fail("returned server must include registered handler")
   }
 }

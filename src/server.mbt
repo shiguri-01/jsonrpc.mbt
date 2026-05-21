@@ -14,7 +14,8 @@ pub fn Server::new() -> Server {
 /// Register a method handler.
 ///
 /// JSON-RPC reserves method names that start with `rpc.` for extensions, so this
-/// helper rejects them early.
+/// helper rejects them early. This is a builder-style operation: the returned
+/// `Server` contains the new handler, while the original `Server` is unchanged.
 pub fn Server::register(
   self : Server,
   name : String,
@@ -30,8 +31,9 @@ pub fn Server::register(
   if self.handlers.get(name) is Some(_) {
     return Err(RpcError::new(invalid_request_code, "Method already registered"))
   }
-  self.handlers[name] = handler
-  Ok(self)
+  let handlers = self.handlers.copy()
+  handlers[name] = handler
+  Ok({ handlers, })
 }
 
 ///|

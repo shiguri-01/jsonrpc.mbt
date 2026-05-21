@@ -33,6 +33,9 @@ test "core dispatches a request" {
 }
 ```
 
+`Server::register` is builder-style: the returned `Server` contains the new
+handler, and the original `Server` value remains unchanged.
+
 ## Notifications
 
 Requests without `id` are notifications. They are dispatched, but no response is

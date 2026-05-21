@@ -22,7 +22,8 @@ application state stay outside the core dispatcher.
 - `Server::new()`: create an empty dispatcher.
 - `Server::register(name, handler)`: register a method. Names starting with
   `rpc.` are rejected because JSON-RPC reserves that prefix, and duplicate
-  names are rejected to avoid accidental handler replacement.
+  names are rejected to avoid accidental handler replacement. Registration is
+  builder-style: use the returned `Server`; the original value is unchanged.
 - `Server::handle_text(input)`: parse and dispatch one JSON document, returning
   `Some(response)` or `None` for notifications.
 - `Server::handle_json(value)`: dispatch an already parsed JSON value.
@@ -121,6 +122,8 @@ let handler = @context.bind(app_state, method_using_state)
 
 `stdio` treats each non-empty input line as one complete JSON-RPC document and
 writes each response as one output line. Notifications produce no output.
+`@rpc_stdio.handle_line(...)` contains the pure one-line behavior used by the
+async loop, which keeps newline-delimited dispatch testable.
 
 ```sh
 moon run --target native src/cmd/stdio-example
@@ -133,6 +136,8 @@ JSON-RPC 2.0 is transport agnostic. A request object must include
 array or object; and a request without `id` is a notification. Notifications do
 not receive responses, including when they appear inside a batch. Error
 responses preserve a valid request `id` when one can be detected; parse errors
-and invalid ids use `null`.
+and invalid ids use `null`. This implementation preserves `id: null` and
+numeric ids, including fractional numbers, even though the JSON-RPC
+specification discourages fractional ids for interoperability.
 
 The official specification is published at <https://www.jsonrpc.org/specification>.
