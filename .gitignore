@@ -2,3 +2,5 @@
 /.mooncakes/
 /.direnv/
 /result
+**/_build/
+**/.mooncakes/

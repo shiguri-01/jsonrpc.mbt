@@ -1,5 +1,5 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "shiguri/jsonrpc/cmd/example"
+package "shiguri/jsonrpc-examples/basic"
 
 import {
   "moonbitlang/core/json",
