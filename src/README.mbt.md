@@ -1,12 +1,14 @@
-# Core Dispatcher
+# shiguri-01/jsonrpc
 
-`shiguri-01/jsonrpc` validates JSON-RPC 2.0 requests, dispatches methods, and builds responses.
+A small JSON-RPC 2.0 server library for MoonBit.
 
-## Dispatch Text
+The core package validates JSON-RPC 2.0 requests, dispatches methods, and builds responses.
+Transport code stays separate, so the same server can be used from HTTP, WebSocket, CLI, stdio, tests, or another runtime boundary.
 
-```mbt check
+## Usage
+
+```mbt
 ///|
-#warnings("-73")
 struct EchoParams {
   message : String
 } derive(FromJson)
@@ -17,46 +19,32 @@ struct EchoResult {
 } derive(ToJson)
 
 ///|
-fn echo(params : EchoParams) -> Result[EchoResult, RpcError] {
+fn echo(params : EchoParams) -> Result[EchoResult, @rpc.RpcError] {
   Ok({ message: params.message })
 }
 
 ///|
-test "core dispatches a request" {
-  let server = Server::new().register("echo", echo).unwrap()
-  let request =
-    #|{"jsonrpc":"2.0","method":"echo","params":{"message":"hello"},"id":1}
-  let response = server.handle_text(request)
-  guard response is Some(text) else { fail("expected response") }
-  let json = @json.parse(text) catch { _ => fail("response must be JSON") }
-  guard json is Object(obj) else { fail("response must be object") }
-  guard obj.get("result") is Some(Object(result)) else {
-    fail("response must include result object")
-  }
-  guard result.get("message") is Some(String("hello")) else {
-    fail("result must preserve params")
-  }
-}
+let server = @rpc.Server::new()
+  .register("echo", echo)
+  .unwrap()
+
+let response = server.handle_text(
+  #|{"jsonrpc":"2.0","method":"echo","params":{"message":"hello"},"id":1}
+)
 ```
+
+`register` works with MoonBit's `FromJson` and `ToJson` traits.
+Use `register_raw` only when a method needs direct `Json?` access.
 
 `Server::register` is builder-style: use the returned `Server`.
-Use `Server::register_raw` only when a method needs direct `Json?` access.
+`Server::handle_text` accepts one JSON document and returns `None` for notifications or notification-only batches.
 
-## Notifications
+## Packages
 
-Requests without `id` are notifications. They are dispatched, but no response is returned.
+- `shiguri-01/jsonrpc`: core dispatcher
+- `shiguri-01/jsonrpc/context`: bind application state to handlers
+- `shiguri-01/jsonrpc/stdio`: native-only stdin/stdout transport
 
-```mbt check
-///|
-test "core suppresses notification response" {
-  let server = Server::new().register("echo", echo).unwrap()
-  let request =
-    #|{"jsonrpc":"2.0","method":"echo","params":{"message":"hello"}}
-  let response = server.handle_text(request)
-  guard response is None else { fail("notification must not respond") }
-}
-```
+See [examples/README.mbt.md](examples/README.mbt.md) for runnable examples.
 
-## Batch
-
-Batch responses preserve call/error order and omit notifications.
+Spec: <https://www.jsonrpc.org/specification>
