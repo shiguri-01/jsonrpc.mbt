@@ -9,7 +9,7 @@ stdio, tests, or another runtime boundary.
 
 ## Usage
 
-```mbt nocheck
+```mbt
 ///|
 struct EchoParams {
   message : String
@@ -21,13 +21,13 @@ struct EchoResult {
 } derive(ToJson)
 
 ///|
-fn echo(params : EchoParams) -> Result[EchoResult, @rpc.RpcError] {
+fn echo(params : EchoParams) -> Result[EchoResult, @jsonrpc.RpcError] {
   Ok({ message: params.message })
 }
 
 ///|
-let endpoint = @rpc.EndpointBuilder()
-  .handle("echo", @rpc.typed(echo))
+let endpoint = @jsonrpc.EndpointBuilder()
+  .handle("echo", @jsonrpc.typed(echo))
   .build()
   .unwrap()
 

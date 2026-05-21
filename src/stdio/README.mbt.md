@@ -4,7 +4,7 @@
 
 `handle_line(endpoint, line)` is the one-line helper used by `run_lines`.
 
-```mbt nocheck
+```mbt
 ///|
 struct EchoParams {
   message : String
