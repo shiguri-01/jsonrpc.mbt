@@ -7,6 +7,10 @@ output line. Notifications produce no output.
 The package depends on `moonbitlang/async/stdio`, so it is kept outside the core
 dispatcher package.
 
+`handle_line(server, line)` exposes the pure one-line behavior used by
+`run_lines`: blank lines produce no output, responses include a trailing
+newline, and notifications produce no output.
+
 ```mbt nocheck
 ///|
 async fn main {

@@ -3,4 +3,8 @@ import {
   "shiguri/jsonrpc" @rpc,
 }
 
+import {
+  "moonbitlang/core/json" @json,
+} for "test"
+
 supported_targets = "+native"
