@@ -10,5 +10,5 @@
     "moonbitlang/async": "0.17.0"
   },
   "source": "src",
-  "preferred-target": "wasm-gc"
+  "preferred-target": "native"
 }

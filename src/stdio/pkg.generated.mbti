@@ -1,0 +1,20 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "shiguri-01/jsonrpc/stdio"
+
+import {
+  "shiguri-01/jsonrpc",
+}
+
+// Values
+pub fn handle_line(@jsonrpc.Server, String) -> String?
+
+pub async fn run_lines(@jsonrpc.Server) -> Unit
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits
+
