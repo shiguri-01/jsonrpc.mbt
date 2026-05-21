@@ -458,9 +458,7 @@ test "spec example non-existent method returns method not found" {
   let response = response_json(spec_server(), request)
   assert_error_code(response, -32601.0)
   guard response is Object(obj) else { fail("response must be object") }
-  guard obj.get("id") is Some(String("1")) else {
-    fail("id must be preserved")
-  }
+  guard obj.get("id") is Some(String("1")) else { fail("id must be preserved") }
 }
 
 ///|
@@ -572,7 +570,9 @@ test "spec example mixed batch returns only call and error responses" {
   }
   assert_error_code(items[2], -32600.0)
   assert_error_code(items[3], -32601.0)
-  guard items[4] is Object(data) else { fail("get_data response must be object") }
+  guard items[4] is Object(data) else {
+    fail("get_data response must be object")
+  }
   guard data.get("result") is Some(Array(values)) else {
     fail("get_data result must be an array")
   }
