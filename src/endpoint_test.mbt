@@ -76,7 +76,7 @@ fn unavailable(_params : Json?) -> Result[Json, RpcError] {
 
 ///|
 fn test_endpoint() -> Endpoint {
-  EndpointBuilder::EndpointBuilder()
+  @jsonrpc.EndpointBuilder()
   .handle("add", add_handler)
   .handle("subtract", subtract_handler)
   .handle("update", ok_null)
@@ -99,7 +99,7 @@ fn assert_error_code(response : Json, code : Double) -> Unit raise {
 
 ///|
 test "builder registers raw and typed handlers" {
-  let endpoint = EndpointBuilder::EndpointBuilder()
+  let endpoint = @jsonrpc.EndpointBuilder()
     .handle("add", typed(add))
     .handle("tuple/add", typed(add_tuple))
     .handle("ping", typed(ping))
@@ -139,7 +139,7 @@ test "builder registers raw and typed handlers" {
 
 ///|
 test "typed decode failures become invalid params" {
-  let endpoint = EndpointBuilder::EndpointBuilder()
+  let endpoint = @jsonrpc.EndpointBuilder()
     .handle("add", typed(add))
     .build()
     .unwrap()
@@ -303,14 +303,14 @@ test "response id null is unexpected" {
 
 ///|
 test "builder reports registration errors on build" {
-  let reserved = EndpointBuilder::EndpointBuilder()
+  let reserved = @jsonrpc.EndpointBuilder()
     .handle("rpc.discover", ok_null)
     .build()
   guard reserved is Err(ReservedMethod("rpc.discover")) else {
     fail("reserved method must be rejected")
   }
 
-  let duplicate = EndpointBuilder::EndpointBuilder()
+  let duplicate = @jsonrpc.EndpointBuilder()
     .handle("echo", ok_null)
     .handle("echo", ok_null)
     .build()

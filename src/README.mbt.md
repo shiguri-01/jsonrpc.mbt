@@ -26,7 +26,7 @@ fn echo(params : EchoParams) -> Result[EchoResult, @rpc.RpcError] {
 }
 
 ///|
-let endpoint = @rpc.EndpointBuilder::EndpointBuilder()
+let endpoint = @rpc.EndpointBuilder()
   .handle("echo", @rpc.typed(echo))
   .build()
   .unwrap()

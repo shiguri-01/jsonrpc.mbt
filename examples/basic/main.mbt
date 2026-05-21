@@ -33,7 +33,7 @@ fn echo(params : EchoParams) -> Result[EchoResult, @rpc.RpcError] {
 
 ///|
 fn main {
-  let endpoint = @rpc.EndpointBuilder::EndpointBuilder()
+  let endpoint = @rpc.EndpointBuilder()
     .handle("subtract", @rpc.typed(subtract))
     .handle("echo", @rpc.typed(echo))
     .build()

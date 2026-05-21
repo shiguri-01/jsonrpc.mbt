@@ -5,7 +5,7 @@ fn echo(params : Json?) -> Result[Json, @rpc.RpcError] {
 
 ///|
 fn test_endpoint() -> @rpc.Endpoint {
-  @rpc.EndpointBuilder::EndpointBuilder().handle("echo", echo).build().unwrap()
+  @rpc.EndpointBuilder().handle("echo", echo).build().unwrap()
 }
 
 ///|
