@@ -90,11 +90,46 @@ fn unavailable_handler(_params : Json?) -> Result[Json, RpcError] {
 }
 
 ///|
+fn sum_handler(params : Json?) -> Result[Json, RpcError] {
+  match params {
+    Some(Array(items)) => {
+      let mut total = 0.0
+      for item in items {
+        match item {
+          Number(value, ..) => total = total + value
+          _ => return Err(invalid_params())
+        }
+      }
+      Ok(Json::number(total))
+    }
+    _ => Err(invalid_params())
+  }
+}
+
+///|
+fn notify_hello_handler(_params : Json?) -> Result[Json, RpcError] {
+  Ok(null)
+}
+
+///|
+fn get_data_handler(_params : Json?) -> Result[Json, RpcError] {
+  Ok(Json::array([Json::string("hello"), Json::number(5.0)]))
+}
+
+///|
+// Fixtures used by tests that mirror the official JSON-RPC 2.0 Examples
+// section: https://www.jsonrpc.org/specification#examples
 fn spec_server() -> Server {
   Server::new()
+  .register_raw("sum", sum_handler)
+  .unwrap()
   .register_raw("subtract", subtract_handler)
   .unwrap()
   .register_raw("update", update_handler)
+  .unwrap()
+  .register_raw("notify_hello", notify_hello_handler)
+  .unwrap()
+  .register_raw("get_data", get_data_handler)
   .unwrap()
   .register_raw("foobar", foobar_handler)
   .unwrap()
@@ -417,6 +452,28 @@ test "spec notification examples return no response" {
 }
 
 ///|
+test "spec example non-existent method returns method not found" {
+  let request =
+    #|{"jsonrpc":"2.0","method":"missing","id":"1"}
+  let response = response_json(spec_server(), request)
+  assert_error_code(response, -32601.0)
+  guard response is Object(obj) else { fail("response must be object") }
+  guard obj.get("id") is Some(String("1")) else {
+    fail("id must be preserved")
+  }
+}
+
+///|
+test "spec example invalid request without id uses null id" {
+  let request =
+    #|{"jsonrpc":"2.0","method":1,"params":"bar"}
+  let response = response_json(spec_server(), request)
+  assert_error_code(response, -32600.0)
+  guard response is Object(obj) else { fail("response must be object") }
+  guard obj.get("id") is Some(Null) else { fail("id must be null") }
+}
+
+///|
 test "invalid request shapes use invalid request error" {
   let server = spec_server()
   let invalid_method =
@@ -480,6 +537,54 @@ test "batch of only notifications returns no response" {
     #|]
   guard spec_server().handle_text(request) is None else {
     fail("notification-only batch must not respond")
+  }
+}
+
+///|
+test "spec example mixed batch returns only call and error responses" {
+  let request =
+    #|[
+    #|  {"jsonrpc":"2.0","method":"sum","params":[1,2,4],"id":"1"},
+    #|  {"jsonrpc":"2.0","method":"notify_hello","params":[7]},
+    #|  {"jsonrpc":"2.0","method":"subtract","params":[42,23],"id":"2"},
+    #|  {"foo":"boo"},
+    #|  {"jsonrpc":"2.0","method":"foo.get","params":{"name":"myself"},"id":"5"},
+    #|  {"jsonrpc":"2.0","method":"get_data","id":"9"}
+    #|]
+  let response = response_json(spec_server(), request)
+  guard response is Array(items) else { fail("response must be an array") }
+  guard items.length() == 5 else { fail("batch response count must be 5") }
+  guard items[0] is Object(sum) else { fail("sum response must be object") }
+  guard sum.get("result") is Some(Number(7.0, ..)) else {
+    fail("sum result must be 7")
+  }
+  guard sum.get("id") is Some(String("1")) else {
+    fail("sum id must be preserved")
+  }
+  guard items[1] is Object(subtract) else {
+    fail("subtract response must be object")
+  }
+  guard subtract.get("result") is Some(Number(19.0, ..)) else {
+    fail("subtract result must be 19")
+  }
+  guard subtract.get("id") is Some(String("2")) else {
+    fail("subtract id must be preserved")
+  }
+  assert_error_code(items[2], -32600.0)
+  assert_error_code(items[3], -32601.0)
+  guard items[4] is Object(data) else { fail("get_data response must be object") }
+  guard data.get("result") is Some(Array(values)) else {
+    fail("get_data result must be an array")
+  }
+  guard values.length() == 2 else { fail("get_data result count must be 2") }
+  guard values[0] is String("hello") else {
+    fail("get_data first value must be hello")
+  }
+  guard values[1] is Number(5.0, ..) else {
+    fail("get_data second value must be 5")
+  }
+  guard data.get("id") is Some(String("9")) else {
+    fail("get_data id must be preserved")
   }
 }
 
