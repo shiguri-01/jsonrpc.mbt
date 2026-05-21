@@ -4,7 +4,8 @@ This directory is a separate MoonBit module with a local dependency on the repos
 
 ## basic
 
-Registers `subtract` and `echo`, sends an in-memory batch request, and prints the response JSON.
+Registers `subtract` and `echo`, sends an in-memory batch request, and prints
+the response JSON.
 
 ```sh
 moon -C examples run basic

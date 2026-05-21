@@ -33,10 +33,10 @@ fn echo(params : EchoParams) -> Result[EchoResult, @rpc.RpcError] {
 
 ///|
 fn main {
-  let server = @rpc.Server::new()
-    .register("subtract", subtract)
-    .unwrap()
-    .register("echo", echo)
+  let endpoint = @rpc.EndpointBuilder::EndpointBuilder()
+    .handle("subtract", @rpc.typed(subtract))
+    .handle("echo", @rpc.typed(echo))
+    .build()
     .unwrap()
 
   let request =
@@ -46,8 +46,10 @@ fn main {
     #|  {"jsonrpc":"2.0","method":"subtract","params":{"minuend":1,"subtrahend":2}}
     #|]
 
-  match server.handle_text(request) {
-    Some(response) => println(response)
-    None => println("notification-only batch")
+  let result = endpoint.receive_text(request)
+  match result.outgoing.length() {
+    0 => println("notification-only batch")
+    1 => println(result.outgoing[0].stringify())
+    _ => println(Json::array(result.outgoing).stringify())
   }
 }

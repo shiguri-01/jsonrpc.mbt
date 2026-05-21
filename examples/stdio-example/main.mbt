@@ -16,6 +16,9 @@ fn echo(params : EchoParams) -> Result[EchoResult, @rpc.RpcError] {
 
 ///|
 async fn main {
-  let server = @rpc.Server::new().register("echo", echo).unwrap()
-  @rpc_stdio.run_lines(server)
+  let endpoint = @rpc.EndpointBuilder::EndpointBuilder()
+    .handle("echo", @rpc.typed(echo))
+    .build()
+    .unwrap()
+  @rpc_stdio.run_lines(endpoint)
 }

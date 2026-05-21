@@ -1,15 +1,25 @@
 ///|
+fn stringify_outgoing(outgoing : Array[Json]) -> String? {
+  match outgoing.length() {
+    0 => None
+    1 => Some(outgoing[0].stringify())
+    _ => Some(Json::array(outgoing).stringify())
+  }
+}
+
+///|
 /// Handle one newline-delimited JSON-RPC input line.
 ///
 /// Empty or whitespace-only lines produce no output. Non-empty lines are
 /// dispatched as complete JSON-RPC documents. Responses include the trailing
 /// newline that the stdio transport writes.
-pub fn handle_line(server : @rpc.Server, line : String) -> String? {
+pub fn handle_line(endpoint : @rpc.Endpoint, line : String) -> String? {
   let request = line.trim().to_owned()
   if request == "" {
     None
   } else {
-    server.handle_text(request).map(response => "\{response}\n")
+    let result = endpoint.receive_text(request)
+    stringify_outgoing(result.outgoing).map(response => "\{response}\n")
   }
 }
 
@@ -18,9 +28,9 @@ pub fn handle_line(server : @rpc.Server, line : String) -> String? {
 ///
 /// Each non-empty input line is treated as one complete JSON-RPC document.
 /// Responses are written as one line. Notifications produce no output.
-pub async fn run_lines(server : @rpc.Server) -> Unit {
+pub async fn run_lines(endpoint : @rpc.Endpoint) -> Unit {
   while @async_stdio.stdin.read_until("\n") is Some(line) {
-    match handle_line(server, line) {
+    match handle_line(endpoint, line) {
       Some(response) => @async_stdio.stdout.write(response)
       None => ()
     }

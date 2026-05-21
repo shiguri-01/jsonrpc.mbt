@@ -7,6 +7,8 @@ import {
 }
 
 // Values
+pub fn batch(Array[Json]) -> Json
+
 pub fn internal_error(message? : String) -> RpcError
 
 pub let internal_error_code : Int
@@ -21,33 +23,69 @@ pub let method_not_found_code : Int
 
 pub let parse_error_code : Int
 
+pub fn[P : @json.FromJson, R : ToJson] typed((P) -> Result[R, RpcError]) -> (Json?) -> Result[Json, RpcError]
+
 // Errors
 
 // Types and methods
+pub(all) struct CompletedRequest {
+  id : Id
+  method_name : String
+  result : Result[Json, RpcError]
+} derive(Eq, @debug.Debug)
+
+pub struct Endpoint {
+  // private fields
+}
+pub fn Endpoint::notify(Self, String, params? : Json) -> Result[Json, EndpointError]
+pub fn Endpoint::receive_json(Self, Json) -> ReceiveResult
+pub fn Endpoint::receive_text(Self, String) -> ReceiveResult
+pub fn Endpoint::request(Self, String, params? : Json, id? : Id) -> Result[Json, EndpointError]
+
+pub struct EndpointBuilder {
+  // private fields
+}
+pub fn EndpointBuilder::EndpointBuilder() -> Self
+pub fn EndpointBuilder::build(Self) -> Result[Endpoint, EndpointError]
+pub fn EndpointBuilder::handle(Self, String, (Json?) -> Result[Json, RpcError]) -> Self
+
+pub(all) enum EndpointError {
+  DuplicatePendingId(Id)
+  DuplicateMethod(String)
+  ReservedMethod(String)
+  InvalidMethod(String)
+} derive(Eq, @debug.Debug)
+
+pub(all) enum Id {
+  String(String)
+  Number(Int)
+} derive(Eq, Hash, @debug.Debug)
+pub fn Id::to_json(Self) -> Json
+
+type Pending derive(Eq, @debug.Debug)
+
+pub(all) struct ReceiveResult {
+  outgoing : Array[Json]
+  completed : Array[CompletedRequest]
+  unexpected : Array[Json]
+} derive(Eq, @debug.Debug)
+
 type Request derive(Eq, @debug.Debug)
 
 type RequestError derive(Eq, @debug.Debug)
+
+type Response derive(Eq, @debug.Debug)
 
 pub(all) struct RpcError {
   code : Int
   message : String
   data : Json?
 } derive(Eq, @debug.Debug)
-pub fn RpcError::new(Int, String) -> Self
+pub fn RpcError::RpcError(Int, String, data? : Json) -> Self
 pub fn RpcError::to_json(Self) -> Json
-pub fn RpcError::with_data(Int, String, Json) -> Self
-
-pub struct Server {
-  // private fields
-}
-pub fn Server::handle_json(Self, Json) -> Json?
-pub fn Server::handle_text(Self, String) -> String?
-pub fn Server::new() -> Self
-pub fn[P : @json.FromJson, R : ToJson] Server::register(Self, String, (P) -> Result[R, RpcError]) -> Result[Self, RpcError]
-pub fn Server::register_raw(Self, String, (Json?) -> Result[Json, RpcError]) -> Result[Self, RpcError]
 
 // Type aliases
-pub type RawHandler = (Json?) -> Result[Json, RpcError]
+pub type Handler = (Json?) -> Result[Json, RpcError]
 
 // Traits
 

@@ -27,31 +27,25 @@ pub(all) struct RpcError {
 } derive(Eq, Debug)
 
 ///|
-/// Construct an RPC error without extra data.
-pub fn RpcError::new(code : Int, message : String) -> RpcError {
-  { code, message, data: None }
-}
-
-///|
-/// Construct an RPC error with additional JSON data.
-pub fn RpcError::with_data(
+/// Construct an RPC error value.
+pub fn RpcError::RpcError(
   code : Int,
   message : String,
-  data : Json,
+  data? : Json,
 ) -> RpcError {
-  { code, message, data: Some(data) }
+  { code, message, data }
 }
 
 ///|
 /// Standard "Invalid params" error.
 pub fn invalid_params(message? : String = "Invalid params") -> RpcError {
-  RpcError::new(invalid_params_code, message)
+  RpcError(invalid_params_code, message)
 }
 
 ///|
 /// Standard "Internal error" error.
 pub fn internal_error(message? : String = "Internal error") -> RpcError {
-  RpcError::new(internal_error_code, message)
+  RpcError(internal_error_code, message)
 }
 
 ///|
@@ -65,3 +59,30 @@ pub fn RpcError::to_json(self : RpcError) -> Json {
   }
   Json::object(obj)
 }
+
+///|
+fn rpc_error_from_json(value : Json) -> RpcError? {
+  guard value is Object(obj) else { return None }
+  let code = match obj.get("code") {
+    Some(Number(value, ..)) => value.to_int()
+    _ => return None
+  }
+  let message = match obj.get("message") {
+    Some(String(value)) => value
+    _ => return None
+  }
+  Some(
+    match obj.get("data") {
+      Some(data) => RpcError(code, message, data~)
+      None => RpcError(code, message)
+    },
+  )
+}
+
+///|
+pub(all) enum EndpointError {
+  DuplicatePendingId(Id)
+  DuplicateMethod(String)
+  ReservedMethod(String)
+  InvalidMethod(String)
+} derive(Eq, Debug)

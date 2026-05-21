@@ -2,7 +2,7 @@
 
 `shiguri-01/jsonrpc/stdio` is a native-only stdin/stdout transport. It reads one JSON-RPC document per line and writes one response per line. Notifications produce no output.
 
-`handle_line(server, line)` is the one-line helper used by `run_lines`.
+`handle_line(endpoint, line)` is the one-line helper used by `run_lines`.
 
 ```mbt nocheck
 ///|
@@ -22,8 +22,11 @@ fn echo(params : EchoParams) -> Result[EchoResult, @rpc.RpcError] {
 
 ///|
 async fn main {
-  let server = @rpc.Server::new().register("echo", echo).unwrap()
-  @rpc_stdio.run_lines(server)
+  let endpoint = @rpc.EndpointBuilder::EndpointBuilder()
+    .handle("echo", @rpc.typed(echo))
+    .build()
+    .unwrap()
+  @rpc_stdio.run_lines(endpoint)
 }
 ```
 
