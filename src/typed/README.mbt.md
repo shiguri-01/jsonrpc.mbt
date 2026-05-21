@@ -6,6 +6,8 @@ decoding `Json?` params before the handler runs. It composes through the core
 
 ## Positional Params
 
+Use `array1`, `array2`, or `array3` for fixed positional params.
+
 ```mbt check
 ///|
 fn add(pair : (Double, Double)) -> Result[Json, @rpc.RpcError] {
@@ -32,6 +34,10 @@ test "typed positional params" {
 
 ## Named Params
 
+Use `field` for required fields and `optional_field` for fields that may be
+absent. `nullable(decode)` accepts JSON `null` as `None`, and otherwise returns
+`Some(decoded)`.
+
 ```mbt check
 ///|
 test "typed named params" {
@@ -49,3 +55,8 @@ test "typed named params" {
   }
 }
 ```
+
+## Scalar Decoders
+
+`number`, `string`, and `bool` decode JSON scalar values and return
+`invalid_params` errors on mismatches.
