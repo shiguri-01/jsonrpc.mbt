@@ -1,6 +1,7 @@
 # Context
 
-`shiguri/jsonrpc/context` adapts stateful handlers to the core `Handler` type.
+`shiguri/jsonrpc/context` adapts stateful handlers to the core `FromJson` /
+`ToJson` registration API.
 It is useful for application state, configuration, or metadata captured by a
 transport layer.
 
@@ -14,12 +15,22 @@ struct DocPrefix {
 }
 
 ///|
-fn doc_echo(context : DocPrefix, params : Json?) -> Result[Json, @rpc.RpcError] {
-  match params {
-    Some(Array([String(message)])) =>
-      Ok(Json::string("\{context.value}\{message}"))
-    _ => Err(@rpc.invalid_params())
-  }
+#warnings("-73")
+struct DocEchoParams {
+  message : String
+} derive(FromJson)
+
+///|
+struct DocEchoResult {
+  message : String
+} derive(ToJson)
+
+///|
+fn doc_echo(
+  context : DocPrefix,
+  params : DocEchoParams,
+) -> Result[DocEchoResult, @rpc.RpcError] {
+  Ok({ message: "\{context.value}\{params.message}" })
 }
 
 ///|
@@ -28,13 +39,19 @@ test "context bind" {
   let handler = bind(prefix, doc_echo)
   let server = @rpc.Server::new().register("echo", handler).unwrap()
   let request =
-    #|{"jsonrpc":"2.0","method":"echo","params":["ok"],"id":1}
+    #|{"jsonrpc":"2.0","method":"echo","params":{"message":"ok"},"id":1}
   let response = server.handle_text(request)
   guard response is Some(text) else { fail("expected response") }
   let json = @json.parse(text) catch { _ => fail("response must be JSON") }
   guard json is Object(obj) else { fail("response must be object") }
-  guard obj.get("result") is Some(String("ctx:ok")) else {
+  guard obj.get("result") is Some(Object(result)) else {
+    fail("response must include result object")
+  }
+  guard result.get("message") is Some(String("ctx:ok")) else {
     fail("result must include context")
   }
 }
 ```
+
+Use `bind_raw` or `register_raw` only when a context-aware method needs direct
+`Json?` access.

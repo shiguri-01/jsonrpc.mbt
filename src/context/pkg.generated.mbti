@@ -2,20 +2,27 @@
 package "shiguri/jsonrpc/context"
 
 import {
+  "moonbitlang/core/json",
   "shiguri/jsonrpc",
 }
 
 // Values
-pub fn[C] bind(C, (C, Json?) -> Result[Json, @jsonrpc.RpcError]) -> (Json?) -> Result[Json, @jsonrpc.RpcError]
+pub fn[C, P, R] bind(C, (C, P) -> Result[R, @jsonrpc.RpcError]) -> (P) -> Result[R, @jsonrpc.RpcError]
 
-pub fn[C] register(@jsonrpc.Server, String, C, (C, Json?) -> Result[Json, @jsonrpc.RpcError]) -> Result[@jsonrpc.Server, @jsonrpc.RpcError]
+pub fn[C] bind_raw(C, (C, Json?) -> Result[Json, @jsonrpc.RpcError]) -> (Json?) -> Result[Json, @jsonrpc.RpcError]
+
+pub fn[C, P : @json.FromJson, R : ToJson] register(@jsonrpc.Server, String, C, (C, P) -> Result[R, @jsonrpc.RpcError]) -> Result[@jsonrpc.Server, @jsonrpc.RpcError]
+
+pub fn[C] register_raw(@jsonrpc.Server, String, C, (C, Json?) -> Result[Json, @jsonrpc.RpcError]) -> Result[@jsonrpc.Server, @jsonrpc.RpcError]
 
 // Errors
 
 // Types and methods
 
 // Type aliases
-pub type Handler[C] = (C, Json?) -> Result[Json, @jsonrpc.RpcError]
+pub type Handler[C, P, R] = (C, P) -> Result[R, @jsonrpc.RpcError]
+
+pub type RawHandler[C] = (C, Json?) -> Result[Json, @jsonrpc.RpcError]
 
 // Traits
 

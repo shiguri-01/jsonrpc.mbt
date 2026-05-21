@@ -1,6 +1,17 @@
 ///|
-fn echo(params : Json?) -> Result[Json, @rpc.RpcError] {
-  Ok(params.unwrap_or(null))
+#warnings("-73")
+struct EchoParams {
+  message : String
+} derive(FromJson)
+
+///|
+struct EchoResult {
+  message : String
+} derive(ToJson)
+
+///|
+fn echo(params : EchoParams) -> Result[EchoResult, @rpc.RpcError] {
+  Ok({ message: params.message })
 }
 
 ///|

@@ -11,8 +11,19 @@ application state. Those concerns should live in transport or adapter packages.
 
 ```mbt check
 ///|
-fn echo(params : Json?) -> Result[Json, RpcError] {
-  Ok(params.unwrap_or(null))
+#warnings("-73")
+struct EchoParams {
+  message : String
+} derive(FromJson)
+
+///|
+struct EchoResult {
+  message : String
+} derive(ToJson)
+
+///|
+fn echo(params : EchoParams) -> Result[EchoResult, RpcError] {
+  Ok({ message: params.message })
 }
 
 ///|
@@ -34,7 +45,8 @@ test "core dispatches a request" {
 ```
 
 `Server::register` is builder-style: the returned `Server` contains the new
-handler, and the original `Server` value remains unchanged.
+JSON trait handler, and the original `Server` value remains unchanged. Use
+`Server::register_raw` only when a method needs direct `Json?` access.
 
 ## Notifications
 

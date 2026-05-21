@@ -1,11 +1,22 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "shiguri/jsonrpc/cmd/example"
 
+import {
+  "moonbitlang/core/json",
+}
+
 // Values
 
 // Errors
 
 // Types and methods
+type EchoParams derive(@json.FromJson)
+
+type EchoResult derive(ToJson)
+
+type SubtractParams derive(@json.FromJson)
+
+type SubtractResult derive(ToJson)
 
 // Type aliases
 

@@ -3,6 +3,7 @@ package "shiguri/jsonrpc"
 
 import {
   "moonbitlang/core/debug",
+  "moonbitlang/core/json",
 }
 
 // Values
@@ -42,10 +43,11 @@ pub struct Server {
 pub fn Server::handle_json(Self, Json) -> Json?
 pub fn Server::handle_text(Self, String) -> String?
 pub fn Server::new() -> Self
-pub fn Server::register(Self, String, (Json?) -> Result[Json, RpcError]) -> Result[Self, RpcError]
+pub fn[P : @json.FromJson, R : ToJson] Server::register(Self, String, (P) -> Result[R, RpcError]) -> Result[Self, RpcError]
+pub fn Server::register_raw(Self, String, (Json?) -> Result[Json, RpcError]) -> Result[Self, RpcError]
 
 // Type aliases
-pub type Handler = (Json?) -> Result[Json, RpcError]
+pub type RawHandler = (Json?) -> Result[Json, RpcError]
 
 // Traits
 

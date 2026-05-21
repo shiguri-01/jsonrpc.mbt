@@ -1,10 +1,10 @@
 ///|
-/// Method handler used by `Server::register`.
+/// Low-level method handler used by `Server::register_raw`.
 ///
 /// The argument is the request `params` member, or `None` when `params` is
 /// absent. Return `Ok(result)` for a normal JSON-RPC result, or `Err(error)` to
 /// send a JSON-RPC error response for calls with an id.
-pub type Handler = (Json?) -> Result[Json, RpcError]
+pub type RawHandler = (Json?) -> Result[Json, RpcError]
 
 ///|
 /// Parsed request data used internally by the dispatcher.

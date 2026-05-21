@@ -13,17 +13,22 @@ application state stay outside the core dispatcher.
 - Single request, notification, and batch handling.
 - Standard error codes: parse error, invalid request, method not found, invalid
   params, and internal error.
-- Handler API built around the public `Handler` alias:
-  `Json? -> Result[Json, RpcError]`.
+- Typed method registration built on MoonBit's `FromJson` and `ToJson` traits.
+- Low-level raw JSON handler API available through `register_raw`.
 - Notification-only requests return `None` instead of an empty response.
 
 ## Public API
 
 - `Server::new()`: create an empty dispatcher.
-- `Server::register(name, handler)`: register a method. Names starting with
-  `rpc.` are rejected because JSON-RPC reserves that prefix, and duplicate
-  names are rejected to avoid accidental handler replacement. Registration is
-  builder-style: use the returned `Server`; the original value is unchanged.
+- `Server::register(name, handler)`: register a JSON trait method. Request
+  params are decoded with `FromJson`, and successful results are encoded with
+  `ToJson`.
+- `Server::register_raw(name, handler)`: register a low-level
+  `Json? -> Result[Json, RpcError]` handler for cases that need direct JSON
+  control.
+- Both registration methods reject names starting with `rpc.` and duplicate
+  names. Registration is builder-style: use the returned `Server`; the original
+  value is unchanged.
 - `Server::handle_text(input)`: parse and dispatch one JSON document, returning
   `Some(response)` or `None` for notifications.
 - `Server::handle_json(value)`: dispatch an already parsed JSON value.
@@ -33,13 +38,11 @@ application state stay outside the core dispatcher.
 
 ## Optional Packages
 
-The core package stays small. Extra packages compose through `Handler` and
-`Server` without adding transport, context, or typed params concepts to the core.
+The core package stays small. Extra packages compose through `RawHandler` and
+`Server` without adding transport or context concepts to the core.
 
-- `shiguri/jsonrpc/typed`: decoder helpers for turning `Json?` params into
-  typed MoonBit values before running a handler.
 - `shiguri/jsonrpc/context`: adapters for binding application state or request
-  metadata to a normal core `Handler`.
+  metadata to a normal core `RawHandler`.
 - `shiguri/jsonrpc/stdio`: native-only newline-delimited stdin/stdout transport
   for quick CLIs and editor-style subprocesses.
 
@@ -52,13 +55,12 @@ not to the package path.
 ```moonbit
 import {
   "shiguri/jsonrpc" @rpc,
-  "shiguri/jsonrpc/typed" @typed,
   "shiguri/jsonrpc/context" @context,
 }
 ```
 
-After that, code uses aliases such as `@rpc.Server::new()`,
-`@typed.handler(...)`, and `@context.bind(...)`.
+After that, code uses aliases such as `@rpc.Server::new()` and
+`@context.bind(...)`.
 
 ## Development
 
@@ -80,8 +82,16 @@ nix run github:moonbit-community/moonbit-overlay#moon -- test
 ## Example
 
 ```moonbit
-fn echo(params : Json?) -> Result[Json, @rpc.RpcError] {
-  Ok(params.unwrap_or(null))
+struct EchoParams {
+  message : String
+} derive(FromJson, ToJson)
+
+struct EchoResult {
+  message : String
+} derive(ToJson)
+
+fn echo(params : EchoParams) -> Result[EchoResult, @rpc.RpcError] {
+  Ok({ message: params.message })
 }
 
 let server = @rpc.Server::new()
@@ -95,24 +105,53 @@ let response = server.handle_text(
 
 See [src/cmd/example/main.mbt](src/cmd/example/main.mbt) for a runnable example.
 
-## Typed Params
+## Typed Methods
 
-Use `typed` when a method has a stable params shape and you want to keep
-validation boilerplate out of business logic:
+Use normal MoonBit types for application params and results. For named params,
+derive JSON traits on structs:
 
 ```moonbit
-fn add(pair : (Double, Double)) -> Result[Json, @rpc.RpcError] {
-  let (a, b) = pair
-  Ok(Json::number(a + b))
+struct AddParams {
+  left : Int
+  right : Int
+} derive(FromJson, ToJson)
+
+struct AddResult {
+  value : Int
+} derive(ToJson)
+
+fn add(params : AddParams) -> Result[AddResult, @rpc.RpcError] {
+  Ok({ value: params.left + params.right })
 }
 
-let handler = @typed.handler(@typed.array2(@typed.number, @typed.number), add)
+let server = @rpc.Server::new().register("add", add).unwrap()
+```
+
+For positional params, use MoonBit tuples. `FromJson` and `ToJson` support
+tuples directly:
+
+```moonbit
+fn subtract(params : (Int, Int)) -> Result[Int, @rpc.RpcError] {
+  let (left, right) = params
+  Ok(left - right)
+}
+```
+
+When a method genuinely needs to inspect raw JSON, register it explicitly as a
+low-level handler:
+
+```moonbit
+fn raw_echo(params : Json?) -> Result[Json, @rpc.RpcError] {
+  Ok(params.unwrap_or(null))
+}
+
+let server = @rpc.Server::new().register_raw("echo", raw_echo).unwrap()
 ```
 
 ## Context
 
 Use `context` when a method needs application state. The core `Server` still
-receives a plain `Handler`.
+receives a plain `RawHandler`.
 
 ```moonbit
 let handler = @context.bind(app_state, method_using_state)

@@ -7,6 +7,45 @@ fn response_json(server : Server, input : String) -> Json raise {
 }
 
 ///|
+#warnings("-73")
+struct AddParams {
+  left : Int
+  right : Int
+} derive(FromJson, Eq, Debug)
+
+///|
+struct AddResult {
+  value : Int
+} derive(ToJson)
+
+///|
+fn add(params : AddParams) -> Result[AddResult, RpcError] {
+  Ok({ value: params.left + params.right })
+}
+
+///|
+fn add_tuple(params : (Int, Int)) -> Result[Int, RpcError] {
+  let (left, right) = params
+  Ok(left + right)
+}
+
+///|
+fn ping(_params : Unit) -> Result[String, RpcError] {
+  Ok("pong")
+}
+
+///|
+fn unavailable_json_trait(_params : Unit) -> Result[String, RpcError] {
+  Err(
+    RpcError::with_data(
+      -32042,
+      "Temporarily unavailable",
+      Json::string("retry later"),
+    ),
+  )
+}
+
+///|
 fn add_handler(params : Json?) -> Result[Json, RpcError] {
   match params {
     Some(Array([Number(a, ..), Number(b, ..)])) => Ok(Json::number(a + b))
@@ -53,11 +92,11 @@ fn unavailable_handler(_params : Json?) -> Result[Json, RpcError] {
 ///|
 fn spec_server() -> Server {
   Server::new()
-  .register("subtract", subtract_handler)
+  .register_raw("subtract", subtract_handler)
   .unwrap()
-  .register("update", update_handler)
+  .register_raw("update", update_handler)
   .unwrap()
-  .register("foobar", foobar_handler)
+  .register_raw("foobar", foobar_handler)
   .unwrap()
 }
 
@@ -75,23 +114,101 @@ fn assert_error_code(response : Json, code : Double) -> Unit raise {
 
 ///|
 test "single request returns result" {
-  let server = Server::new().register("add", add_handler).unwrap()
+  let server = Server::new().register("add", add).unwrap()
   let request =
-    #|{"jsonrpc":"2.0","method":"add","params":[2,3],"id":1}
+    #|{"jsonrpc":"2.0","method":"add","params":{"left":2,"right":3},"id":1}
   let response = response_json(server, request)
   guard response is Object(obj) else { fail("response must be an object") }
   guard obj.get("jsonrpc") is Some(String("2.0")) else {
     fail("jsonrpc must be 2.0")
   }
-  guard obj.get("result") is Some(Number(5.0, ..)) else {
-    fail("result must be 5")
+  guard obj.get("result") is Some(Object(result)) else {
+    fail("result must be an object")
+  }
+  guard result.get("value") is Some(Number(5.0, ..)) else {
+    fail("result value must be 5")
   }
   guard obj.get("id") is Some(Number(1.0, ..)) else { fail("id must be 1") }
 }
 
 ///|
+test "json trait registration decodes positional tuple params" {
+  let server = Server::new().register("add", add_tuple).unwrap()
+  let request =
+    #|{"jsonrpc":"2.0","method":"add","params":[2,3],"id":1}
+  let response = response_json(server, request)
+  guard response is Object(obj) else { fail("response must be an object") }
+  guard obj.get("result") is Some(Number(5.0, ..)) else {
+    fail("result must be 5")
+  }
+}
+
+///|
+test "json trait registration decodes absent params as unit" {
+  let server = Server::new().register("ping", ping).unwrap()
+  let request =
+    #|{"jsonrpc":"2.0","method":"ping","id":1}
+  let response = response_json(server, request)
+  guard response is Object(obj) else { fail("response must be an object") }
+  guard obj.get("result") is Some(String("pong")) else {
+    fail("result must be pong")
+  }
+}
+
+///|
+test "json trait registration maps decode failures to invalid params" {
+  let server = Server::new().register("add", add).unwrap()
+  let request =
+    #|{"jsonrpc":"2.0","method":"add","params":{"left":"two","right":3},"id":1}
+  let response = response_json(server, request)
+  guard response is Object(obj) else { fail("response must be an object") }
+  guard obj.get("error") is Some(Object(error)) else {
+    fail("response must include error")
+  }
+  guard error.get("code") is Some(Number(-32602.0, ..)) else {
+    fail("error code must be invalid params")
+  }
+  guard error.get("data") is Some(Object(data)) else {
+    fail("error must include decode data")
+  }
+  guard data.get("path") is Some(String("/left")) else {
+    fail("decode path must identify the bad field")
+  }
+}
+
+///|
+test "json trait registration preserves handler errors" {
+  let server = Server::new()
+    .register("unavailable", unavailable_json_trait)
+    .unwrap()
+  let request =
+    #|{"jsonrpc":"2.0","method":"unavailable","id":"call-1"}
+  let response = response_json(server, request)
+  guard response is Object(obj) else { fail("response must be an object") }
+  guard obj.get("error") is Some(Object(error)) else {
+    fail("response must include error")
+  }
+  guard error.get("code") is Some(Number(-32042.0, ..)) else {
+    fail("user-defined error code must be preserved")
+  }
+  guard error.get("data") is Some(String("retry later")) else {
+    fail("user-defined error data must be preserved")
+  }
+}
+
+///|
+test "json trait notification suppresses decode error response" {
+  let server = Server::new().register("add", add).unwrap()
+  let request =
+    #|{"jsonrpc":"2.0","method":"add","params":{"left":"two","right":3}}
+  guard server.handle_text(request) is None else {
+    fail("notification decode errors must not respond")
+  }
+}
+
+///|
 test "notification has no response" {
-  let server = Server::new().register("add", add_handler).unwrap()
+  let server = Server::new().register_raw("add", add_handler).unwrap()
   let request =
     #|{"jsonrpc":"2.0","method":"add","params":[2,3]}
   let response = server.handle_text(request)
@@ -115,8 +232,18 @@ test "method not found is a standard error" {
 }
 
 ///|
+test "method not found notification has no response" {
+  let server = Server::new()
+  let request =
+    #|{"jsonrpc":"2.0","method":"missing"}
+  guard server.handle_text(request) is None else {
+    fail("missing notification must not respond")
+  }
+}
+
+///|
 test "handler can return invalid params" {
-  let server = Server::new().register("add", add_handler).unwrap()
+  let server = Server::new().register_raw("add", add_handler).unwrap()
   let request =
     #|{"jsonrpc":"2.0","method":"add","params":{"left":1},"id":1}
   let response = response_json(server, request)
@@ -146,7 +273,7 @@ test "empty batch is invalid request" {
 
 ///|
 test "batch omits notification responses" {
-  let server = Server::new().register("add", add_handler).unwrap()
+  let server = Server::new().register_raw("add", add_handler).unwrap()
   let request =
     #|[
     #|  {"jsonrpc":"2.0","method":"add","params":[1,2],"id":1},
@@ -177,7 +304,7 @@ test "parse error uses null id" {
 
 ///|
 test "request id null is a call id and is preserved" {
-  let server = Server::new().register("add", add_handler).unwrap()
+  let server = Server::new().register_raw("add", add_handler).unwrap()
   let request =
     #|{"jsonrpc":"2.0","method":"add","params":[2,3],"id":null}
   let response = response_json(server, request)
@@ -190,7 +317,7 @@ test "request id null is a call id and is preserved" {
 
 ///|
 test "fractional number id is accepted and preserved" {
-  let server = Server::new().register("add", add_handler).unwrap()
+  let server = Server::new().register_raw("add", add_handler).unwrap()
   let request =
     #|{"jsonrpc":"2.0","method":"add","params":[2,3],"id":1.5}
   let response = response_json(server, request)
@@ -206,7 +333,7 @@ test "fractional number id is accepted and preserved" {
 ///|
 test "handler user-defined error code is preserved" {
   let server = Server::new()
-    .register("unavailable", unavailable_handler)
+    .register_raw("unavailable", unavailable_handler)
     .unwrap()
   let request =
     #|{"jsonrpc":"2.0","method":"unavailable","id":"call-1"}
@@ -383,7 +510,16 @@ test "batch with invalid entries returns ordered call and error responses" {
 
 ///|
 test "reserved rpc prefix cannot be registered" {
-  let result = Server::new().register("rpc.discover", foobar_handler)
+  let result = Server::new().register_raw("rpc.discover", foobar_handler)
+  guard result is Err(error) else { fail("reserved method must be rejected") }
+  guard error.code == invalid_request_code else {
+    fail("reserved method must use invalid request code")
+  }
+}
+
+///|
+test "reserved rpc prefix cannot be registered with json trait handler" {
+  let result = Server::new().register("rpc.discover", ping)
   guard result is Err(error) else { fail("reserved method must be rejected") }
   guard error.code == invalid_request_code else {
     fail("reserved method must use invalid request code")
@@ -392,8 +528,18 @@ test "reserved rpc prefix cannot be registered" {
 
 ///|
 test "duplicate method registration is rejected" {
-  let server = Server::new().register("echo", foobar_handler).unwrap()
-  let result = server.register("echo", foobar_handler)
+  let server = Server::new().register_raw("echo", foobar_handler).unwrap()
+  let result = server.register_raw("echo", foobar_handler)
+  guard result is Err(error) else { fail("duplicate method must be rejected") }
+  guard error.code == invalid_request_code else {
+    fail("duplicate method must use invalid request code")
+  }
+}
+
+///|
+test "duplicate json trait method registration is rejected" {
+  let server = Server::new().register("ping", ping).unwrap()
+  let result = server.register("ping", ping)
   guard result is Err(error) else { fail("duplicate method must be rejected") }
   guard error.code == invalid_request_code else {
     fail("duplicate method must use invalid request code")
@@ -403,7 +549,7 @@ test "duplicate method registration is rejected" {
 ///|
 test "register returns a new server and leaves the original unchanged" {
   let original = Server::new()
-  let registered = original.register("echo", foobar_handler).unwrap()
+  let registered = original.register_raw("echo", foobar_handler).unwrap()
   let request =
     #|{"jsonrpc":"2.0","method":"echo","id":1}
   let original_response = response_json(original, request)

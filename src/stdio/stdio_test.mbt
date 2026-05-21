@@ -5,7 +5,7 @@ fn echo(params : Json?) -> Result[Json, @rpc.RpcError] {
 
 ///|
 fn test_server() -> @rpc.Server {
-  @rpc.Server::new().register("echo", echo).unwrap()
+  @rpc.Server::new().register_raw("echo", echo).unwrap()
 }
 
 ///|
@@ -34,6 +34,23 @@ test "handle_line writes one response line for one request line" {
   }
   guard result.get("message") is Some(String("hello")) else {
     fail("result must preserve params")
+  }
+}
+
+///|
+test "handle_line writes one error line for malformed json" {
+  let output = handle_line(test_server(), "{\"jsonrpc\":\n")
+  guard output is Some(text) else { fail("parse error must produce output") }
+  guard text.has_suffix("\n") else { fail("output must end with newline") }
+  let json = @json.parse(text.trim().to_owned()) catch {
+    _ => fail("response line must be JSON")
+  }
+  guard json is Object(obj) else { fail("response must be object") }
+  guard obj.get("error") is Some(Object(error)) else {
+    fail("response must include error")
+  }
+  guard error.get("code") is Some(Number(-32700.0, ..)) else {
+    fail("error code must be parse error")
   }
 }
 
