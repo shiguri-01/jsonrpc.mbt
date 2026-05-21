@@ -1,4 +1,4 @@
-# jsonrpc.mbt
+# shiguri/jsonrpc
 
 A small JSON-RPC 2.0 server library for MoonBit.
 
