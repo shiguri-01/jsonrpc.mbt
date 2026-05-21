@@ -1,15 +1,8 @@
 # Stdio Transport
 
-`shiguri/jsonrpc/stdio` is a native-only transport adapter. It reads one
-newline-delimited JSON-RPC document per input line and writes one response per
-output line. Notifications produce no output.
+`shiguri/jsonrpc/stdio` is a native-only stdin/stdout transport. It reads one JSON-RPC document per line and writes one response per line. Notifications produce no output.
 
-The package depends on `moonbitlang/async/stdio`, so it is kept outside the core
-dispatcher package.
-
-`handle_line(server, line)` exposes the pure one-line behavior used by
-`run_lines`: blank lines produce no output, responses include a trailing
-newline, and notifications produce no output.
+`handle_line(server, line)` is the one-line helper used by `run_lines`.
 
 ```mbt nocheck
 ///|
@@ -34,8 +27,8 @@ async fn main {
 }
 ```
 
-Run the example package with the native backend:
+Run the example with the native backend:
 
 ```sh
-moon run --target native src/cmd/stdio-example
+moon -C examples run --target native stdio-example
 ```

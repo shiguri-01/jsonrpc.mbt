@@ -1,12 +1,6 @@
 # Context
 
-`shiguri/jsonrpc/context` adapts stateful handlers to the core `FromJson` /
-`ToJson` registration API.
-It is useful for application state, configuration, or metadata captured by a
-transport layer.
-
-The package does not define a new server. It only binds context to a handler or
-registers that bound handler on a core `Server`.
+`shiguri/jsonrpc/context` binds application state to handlers. It does not define a separate server.
 
 ```mbt check
 ///|
@@ -53,5 +47,4 @@ test "context bind" {
 }
 ```
 
-Use `bind_raw` or `register_raw` only when a context-aware method needs direct
-`Json?` access.
+Use `bind_raw` or `register_raw` only when a context-aware method needs direct `Json?` access.

@@ -1,11 +1,6 @@
 # Core Dispatcher
 
-`shiguri/jsonrpc` is the transport-agnostic JSON-RPC 2.0 dispatcher. It owns
-request validation, method lookup, notification handling, batch response
-selection, and standard error response construction.
-
-It deliberately does not own HTTP, stdio, WebSocket, authentication, logging, or
-application state. Those concerns should live in transport or adapter packages.
+`shiguri/jsonrpc` validates JSON-RPC 2.0 requests, dispatches methods, and builds responses.
 
 ## Dispatch Text
 
@@ -44,14 +39,12 @@ test "core dispatches a request" {
 }
 ```
 
-`Server::register` is builder-style: the returned `Server` contains the new
-JSON trait handler, and the original `Server` value remains unchanged. Use
-`Server::register_raw` only when a method needs direct `Json?` access.
+`Server::register` is builder-style: use the returned `Server`.
+Use `Server::register_raw` only when a method needs direct `Json?` access.
 
 ## Notifications
 
-Requests without `id` are notifications. They are dispatched, but no response is
-returned.
+Requests without `id` are notifications. They are dispatched, but no response is returned.
 
 ```mbt check
 ///|
@@ -66,5 +59,4 @@ test "core suppresses notification response" {
 
 ## Batch
 
-Batch handling keeps call responses and error responses in order, while omitting
-notification responses.
+Batch responses preserve call/error order and omit notifications.
