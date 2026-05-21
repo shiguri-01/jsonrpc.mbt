@@ -1,6 +1,6 @@
 # Context
 
-`shiguri/jsonrpc/context` binds application state to handlers. It does not define a separate server.
+`shiguri-01/jsonrpc/context` binds application state to handlers. It does not define a separate server.
 
 ```mbt check
 ///|

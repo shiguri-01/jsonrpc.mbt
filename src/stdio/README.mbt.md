@@ -1,6 +1,6 @@
 # Stdio Transport
 
-`shiguri/jsonrpc/stdio` is a native-only stdin/stdout transport. It reads one JSON-RPC document per line and writes one response per line. Notifications produce no output.
+`shiguri-01/jsonrpc/stdio` is a native-only stdin/stdout transport. It reads one JSON-RPC document per line and writes one response per line. Notifications produce no output.
 
 `handle_line(server, line)` is the one-line helper used by `run_lines`.
 

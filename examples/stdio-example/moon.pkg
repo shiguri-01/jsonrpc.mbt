@@ -1,8 +1,8 @@
 import {
   "moonbitlang/async",
   "moonbitlang/core/json",
-  "shiguri/jsonrpc" @rpc,
-  "shiguri/jsonrpc/stdio" @rpc_stdio,
+  "shiguri-01/jsonrpc" @rpc,
+  "shiguri-01/jsonrpc/stdio" @rpc_stdio,
 }
 
 supported_targets = "+native"

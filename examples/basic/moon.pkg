@@ -1,6 +1,6 @@
 import {
   "moonbitlang/core/json",
-  "shiguri/jsonrpc" @rpc,
+  "shiguri-01/jsonrpc" @rpc,
 }
 
 options(

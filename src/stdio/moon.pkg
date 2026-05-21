@@ -1,6 +1,6 @@
 import {
   "moonbitlang/async/stdio" @async_stdio,
-  "shiguri/jsonrpc" @rpc,
+  "shiguri-01/jsonrpc" @rpc,
 }
 
 import {

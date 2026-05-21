@@ -1,9 +1,9 @@
 // Generated using `moon info`, DON'T EDIT IT
-package "shiguri/jsonrpc/context"
+package "shiguri-01/jsonrpc/context"
 
 import {
   "moonbitlang/core/json",
-  "shiguri/jsonrpc",
+  "shiguri-01/jsonrpc",
 }
 
 // Values

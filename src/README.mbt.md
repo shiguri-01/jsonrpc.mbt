@@ -1,6 +1,6 @@
 # Core Dispatcher
 
-`shiguri/jsonrpc` validates JSON-RPC 2.0 requests, dispatches methods, and builds responses.
+`shiguri-01/jsonrpc` validates JSON-RPC 2.0 requests, dispatches methods, and builds responses.
 
 ## Dispatch Text
 

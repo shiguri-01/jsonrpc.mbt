@@ -1,4 +1,4 @@
-# shiguri/jsonrpc
+# shiguri-01/jsonrpc
 
 A small JSON-RPC 2.0 server library for MoonBit.
 
@@ -32,9 +32,9 @@ let response = server.handle_text(
 
 ## Packages
 
-- `shiguri/jsonrpc`: core dispatcher
-- `shiguri/jsonrpc/context`: bind application state to handlers
-- `shiguri/jsonrpc/stdio`: native-only stdin/stdout transport
+- `shiguri-01/jsonrpc`: core dispatcher
+- `shiguri-01/jsonrpc/context`: bind application state to handlers
+- `shiguri-01/jsonrpc/stdio`: native-only stdin/stdout transport
 
 ## Development
 

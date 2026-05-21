@@ -1,9 +1,9 @@
 {
-  "name": "shiguri/jsonrpc-examples",
+  "name": "shiguri-01/jsonrpc-examples",
   "version": "0.1.0",
   "deps": {
     "moonbitlang/async": "0.17.0",
-    "shiguri/jsonrpc": {
+    "shiguri-01/jsonrpc": {
       "path": ".."
     }
   }
