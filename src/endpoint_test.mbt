@@ -1,10 +1,10 @@
 ///|
 fn response_json(endpoint : Endpoint, input : String) -> Json raise {
   let result = endpoint.receive_text(input)
-  guard result.outgoing.length() == 1 else {
+  guard result.outgoing is [response] else {
     fail("expected one outgoing response")
   }
-  result.outgoing[0]
+  response
 }
 
 ///|

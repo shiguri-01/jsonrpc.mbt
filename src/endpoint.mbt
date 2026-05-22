@@ -79,10 +79,9 @@ pub fn EndpointBuilder::handle(
 pub fn EndpointBuilder::build(
   self : EndpointBuilder,
 ) -> Result[Endpoint, EndpointError] {
-  if self.errors.get(0) is Some(error) {
-    Err(error)
-  } else {
-    Ok({ router: self.handlers, next_id: 1, pending: {} })
+  match self.errors {
+    [error, ..] => Err(error)
+    [] => Ok({ router: self.handlers, next_id: 1, pending: {} })
   }
 }
 

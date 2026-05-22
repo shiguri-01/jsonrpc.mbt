@@ -1,9 +1,9 @@
 ///|
 fn stringify_outgoing(outgoing : Array[Json]) -> String? {
-  match outgoing.length() {
-    0 => None
-    1 => Some(outgoing[0].stringify())
-    _ => Some(Json::array(outgoing).stringify())
+  match outgoing {
+    [] => None
+    [item] => Some(item.stringify())
+    items => Some(Json::array(items).stringify())
   }
 }
 
