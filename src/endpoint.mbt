@@ -125,17 +125,24 @@ pub fn Endpoint::request(
   }
   let request_id = match id {
     Some(value) => value
-    None => {
-      let value = Number(self.next_id)
-      self.next_id = self.next_id + 1
-      value
-    }
+    None => self.allocate_id()
   }
   if self.pending.get(request_id) is Some(_) {
     return Err(DuplicatePendingId(request_id))
   }
   self.pending[request_id] = { name: rpc_method }
   Ok(make_request_message(rpc_method, params, Some(request_id)))
+}
+
+///|
+fn Endpoint::allocate_id(self : Endpoint) -> Id {
+  let mut value = Number(self.next_id)
+  while self.pending.get(value) is Some(_) {
+    self.next_id = self.next_id + 1
+    value = Number(self.next_id)
+  }
+  self.next_id = self.next_id + 1
+  value
 }
 
 ///|
@@ -201,10 +208,19 @@ fn Endpoint::receive_one(
   value : Json,
   result : ReceiveResult,
 ) -> Unit {
-  if parse_response(value) is Some(response) {
-    self.complete_response(response, value, result)
-    return
+  match classify_message(value) {
+    RequestLike => self.receive_request_like(value, result)
+    ResponseLike => self.receive_response_like(value, result)
+    InvalidLike => self.receive_request_like(value, result)
   }
+}
+
+///|
+fn Endpoint::receive_request_like(
+  self : Endpoint,
+  value : Json,
+  result : ReceiveResult,
+) -> Unit {
   let request = match parse_request(value) {
     Ok(request) => request
     Err(error) =>
@@ -240,6 +256,18 @@ fn Endpoint::receive_one(
       } else {
         result.outgoing.push(error_response(id, error))
       }
+  }
+}
+
+///|
+fn Endpoint::receive_response_like(
+  self : Endpoint,
+  value : Json,
+  result : ReceiveResult,
+) -> Unit {
+  match parse_response(value) {
+    Some(response) => self.complete_response(response, value, result)
+    None => result.unexpected.push(value)
   }
 }
 

@@ -265,6 +265,25 @@ test "outgoing request auto id and completion" {
 }
 
 ///|
+test "auto id skips explicit pending numeric ids" {
+  let endpoint = test_endpoint()
+  let explicit = endpoint.request("remote/explicit", id=Number(1)).unwrap()
+  guard explicit is Object(explicit_obj) else {
+    fail("explicit request must be object")
+  }
+  guard explicit_obj.get("id") is Some(Number(1.0, ..)) else {
+    fail("explicit id must be 1")
+  }
+  let automatic = endpoint.request("remote/auto").unwrap()
+  guard automatic is Object(auto_obj) else {
+    fail("automatic request must be object")
+  }
+  guard auto_obj.get("id") is Some(Number(2.0, ..)) else {
+    fail("automatic id must skip pending id")
+  }
+}
+
+///|
 test "explicit id and duplicate pending id" {
   let endpoint = test_endpoint()
   let first = endpoint.request("remote/one", id=String("abc")).unwrap()
@@ -288,6 +307,30 @@ test "unexpected responses are observable" {
   }
   guard result.unexpected.length() == 1 else {
     fail("unexpected response must be recorded")
+  }
+}
+
+///|
+test "request with extra result member is still a request" {
+  let request =
+    #|{"jsonrpc":"2.0","method":"add","params":[2,3],"result":0,"id":1}
+  let response = response_json(test_endpoint(), request)
+  guard response is Object(obj) else { fail("response must be object") }
+  guard obj.get("result") is Some(Number(5.0, ..)) else {
+    fail("request must be dispatched")
+  }
+}
+
+///|
+test "malformed response is unexpected and receives no response" {
+  let response =
+    #|{"jsonrpc":"2.0","result":1,"error":{"code":-32000,"message":"bad"},"id":99}
+  let result = test_endpoint().receive_text(response)
+  guard result.outgoing.is_empty() else {
+    fail("response-like message must not receive a response")
+  }
+  guard result.unexpected.length() == 1 else {
+    fail("malformed response must be observable")
   }
 }
 

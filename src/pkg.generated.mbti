@@ -62,6 +62,8 @@ pub(all) enum Id {
 } derive(Eq, Hash, @debug.Debug)
 pub fn Id::to_json(Self) -> Json
 
+type MessageKind derive(Eq, @debug.Debug)
+
 type Pending derive(Eq, @debug.Debug)
 
 pub(all) struct ReceiveResult {

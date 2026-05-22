@@ -129,6 +129,25 @@ fn unknown_id_error(error : RpcError) -> Json {
 }
 
 ///|
+enum MessageKind {
+  RequestLike
+  ResponseLike
+  InvalidLike
+} derive(Eq, Debug)
+
+///|
+fn classify_message(value : Json) -> MessageKind {
+  guard value is Object(obj) else { return InvalidLike }
+  if obj.get("method") is Some(_) {
+    RequestLike
+  } else if obj.get("result") is Some(_) || obj.get("error") is Some(_) {
+    ResponseLike
+  } else {
+    InvalidLike
+  }
+}
+
+///|
 struct Response {
   id : Json
   result : Result[Json, RpcError]
