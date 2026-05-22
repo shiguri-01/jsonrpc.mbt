@@ -4,29 +4,36 @@
 
 `handle_line(endpoint, line)` is the one-line helper used by `run_lines`.
 
-```mbt nocheck
+```mbt check
 ///|
-struct EchoParams {
+#warnings("-73")
+struct StdioEchoParams {
   message : String
 } derive(FromJson)
 
 ///|
-struct EchoResult {
+struct StdioEchoResult {
   message : String
 } derive(ToJson)
 
 ///|
-fn echo(params : EchoParams) -> Result[EchoResult, @rpc.RpcError] {
+fn stdio_echo(
+  params : StdioEchoParams,
+) -> Result[StdioEchoResult, @rpc.RpcError] {
   Ok({ message: params.message })
 }
 
 ///|
-async fn main {
+test "handle_line" {
   let endpoint = @rpc.EndpointBuilder()
-    .handle("echo", @rpc.typed(echo))
+    .handle("echo", @rpc.typed(stdio_echo))
     .build()
     .unwrap()
-  @rpc_stdio.run_lines(endpoint)
+  let input =
+    #|{"jsonrpc":"2.0","method":"echo","params":{"message":"hello"},"id":1}
+  guard handle_line(endpoint, input) is Some(_) else {
+    fail("expected response line")
+  }
 }
 ```
 

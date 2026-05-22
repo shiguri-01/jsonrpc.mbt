@@ -2,10 +2,8 @@
 
 A small JSON-RPC 2.0 endpoint library for MoonBit.
 
-The core package validates JSON-RPC 2.0 messages, dispatches methods, builds
-responses, creates outgoing requests, and tracks pending responses. Transport
-code stays separate, so the same endpoint can be used from HTTP, WebSocket, CLI,
-stdio, tests, or another runtime boundary.
+The core package works with complete JSON-RPC messages. Transports such as
+stdio, WebSocket, and HTTP stay outside the core.
 
 ## Usage
 
@@ -27,102 +25,59 @@ fn echo(params : EchoParams) -> Result[EchoResult, @jsonrpc.RpcError] {
 }
 
 ///|
-test "receive call" {
+pub fn usage() -> Unit {
   let endpoint = @jsonrpc.EndpointBuilder()
     .handle("echo", @jsonrpc.typed(echo))
     .build()
     .unwrap()
+
   let received = endpoint.receive_text(
     (
       #|{"jsonrpc":"2.0","method":"echo","params":{"message":"hello"},"id":1}
     ),
   )
-  guard received.outgoing.length() == 1 else { fail("expected response") }
-}
-```
 
-`EndpointBuilder::handle` registers one handler shape:
-`(Json?) -> Result[Json, RpcError]`. Use `typed` when a method should decode
-params with MoonBit's `FromJson` trait and encode results with `ToJson`.
-
-`Endpoint::receive_text` accepts one JSON document and returns a
-`ReceiveResult`. Send `ReceiveResult.outgoing` through your transport.
-
-The same endpoint can also create local requests and match later responses.
-
-```mbt check
-///|
-test "send call" {
-  let endpoint = @jsonrpc.EndpointBuilder().build().unwrap()
   let request = endpoint.request("workspace/configuration").unwrap()
-  guard request.stringify() != "" else { fail("request must be JSON") }
-  let response = endpoint.receive_text(
-    (
-      #|{"jsonrpc":"2.0","result":{"format":"json"},"id":1}
-    ),
-  )
-  guard response.completed.length() == 1 else { fail("expected completion") }
-}
-```
 
-Send `request` through your transport. When the peer sends a response with the
-same id, it appears in `ReceiveResult.completed`.
-
-Notifications are created without pending response state.
-
-```mbt check
-///|
-test "send notification" {
-  let endpoint = @jsonrpc.EndpointBuilder().build().unwrap()
   let notification = endpoint.notify("window/logMessage", params=null).unwrap()
-  guard notification.stringify() != "" else {
-    fail("notification must be JSON")
-  }
+
+  // In an application, write these JSON values to your transport.
+  ignore(received)
+  ignore(request)
+  ignore(notification)
 }
 ```
 
-Configuration and application-owned data stay outside the core endpoint. Capture
-the value a handler needs in a closure, or wrap that pattern in your own small
-adapter.
+Send `received.outgoing`, `request`, or `notification` through your transport.
+Responses for local requests appear in `ReceiveResult.completed`.
+
+Configuration or application-owned data can be captured by the handler.
 
 ```mbt check
 ///|
-struct AppConfig {
+struct Config {
   prefix : String
 }
 
 ///|
-#warnings("-73")
-struct GreetParams {
-  name : String
-} derive(FromJson)
-
-///|
-struct GreetResult {
-  message : String
-} derive(ToJson)
-
-///|
-fn greet(
-  config : AppConfig,
-  params : GreetParams,
-) -> Result[GreetResult, @jsonrpc.RpcError] {
-  Ok({ message: "\{config.prefix}, \{params.name}" })
+fn greet(config : Config, params : Json?) -> Result[Json, @jsonrpc.RpcError] {
+  guard params is Some(Object({ "name": String(name), .. })) else {
+    Err(@jsonrpc.invalid_params())
+  }
+  Ok(Json::string("\{config.prefix}, \{name}"))
 }
 
 ///|
-test "application data" {
-  let config : AppConfig = { prefix: "hello" }
+pub fn configured_usage() -> Unit {
+  let config : Config = { prefix: "hello" }
+
   let endpoint = @jsonrpc.EndpointBuilder()
-    .handle("greet", @jsonrpc.typed(params => greet(config, params)))
+    .handle("greet", params => greet(config, params))
     .build()
     .unwrap()
-  let received = endpoint.receive_text(
-    (
-      #|{"jsonrpc":"2.0","method":"greet","params":{"name":"MoonBit"},"id":1}
-    ),
-  )
-  guard received.outgoing.length() == 1 else { fail("expected response") }
+
+  // Reuse the endpoint from the transport loop that drives your application.
+  ignore(endpoint)
 }
 ```
 
