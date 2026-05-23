@@ -23,7 +23,7 @@ pub let method_not_found_code : Int
 
 pub let parse_error_code : Int
 
-pub fn[P : @json.FromJson, R : ToJson] typed((P) -> Result[R, RpcError]) -> (Json?) -> Result[Json, RpcError]
+pub fn[P : @json.FromJson, R : ToJson] typed(async (P) -> Result[R, RpcError]) -> async (Json?) -> Result[Json, RpcError]
 
 // Errors
 
@@ -38,8 +38,8 @@ pub struct Endpoint {
   // private fields
 }
 pub fn Endpoint::notify(Self, String, params? : Json) -> Result[Json, EndpointError]
-pub fn Endpoint::receive_json(Self, Json) -> ReceiveResult
-pub fn Endpoint::receive_text(Self, String) -> ReceiveResult
+pub async fn Endpoint::receive_json(Self, Json) -> ReceiveResult
+pub async fn Endpoint::receive_text(Self, String) -> ReceiveResult
 pub fn Endpoint::request(Self, String, params? : Json, id? : Id) -> Result[Json, EndpointError]
 
 pub struct EndpointBuilder {
@@ -47,7 +47,7 @@ pub struct EndpointBuilder {
 }
 pub fn EndpointBuilder::EndpointBuilder() -> Self
 pub fn EndpointBuilder::build(Self) -> Result[Endpoint, EndpointError]
-pub fn EndpointBuilder::handle(Self, String, (Json?) -> Result[Json, RpcError]) -> Self
+pub fn EndpointBuilder::handle(Self, String, async (Json?) -> Result[Json, RpcError]) -> Self
 
 pub(all) enum EndpointError {
   DuplicatePendingId(Id)
@@ -87,7 +87,7 @@ pub fn RpcError::RpcError(Int, String, data? : Json) -> Self
 pub fn RpcError::to_json(Self) -> Json
 
 // Type aliases
-pub type Handler = (Json?) -> Result[Json, RpcError]
+pub type Handler = async (Json?) -> Result[Json, RpcError]
 
 // Traits
 

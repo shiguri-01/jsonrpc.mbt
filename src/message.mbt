@@ -4,7 +4,7 @@
 /// The argument is the request `params` member, or `None` when `params` is
 /// absent. Return `Ok(result)` for a normal JSON-RPC result, or `Err(error)` to
 /// send a JSON-RPC error response for calls with an id.
-pub type Handler = (Json?) -> Result[Json, RpcError]
+pub type Handler = async (Json?) -> Result[Json, RpcError]
 
 ///|
 /// JSON-RPC request id used for local request correlation.

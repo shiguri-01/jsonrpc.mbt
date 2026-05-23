@@ -4,19 +4,21 @@ This directory is a separate MoonBit module with a local dependency on the repos
 
 ## basic
 
-Registers `subtract` and `echo`, sends an in-memory batch request, and prints
-the response JSON.
+Registers `subtract` and `echo`, sends an in-memory batch document with two
+requests and one notification, and prints the response JSON.
 
 ```sh
 moon -C examples run basic
 ```
 
-## stdio-example
+## stdio
 
 Serves JSON-RPC over stdin/stdout. Each non-empty input line is one JSON-RPC document.
+The example prints usage hints to stderr so stdout stays reserved for JSON-RPC
+responses.
 
 ```sh
-moon -C examples run --target native stdio-example
+moon -C examples run stdio
 ```
 
 Example input:

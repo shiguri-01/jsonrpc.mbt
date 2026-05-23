@@ -6,7 +6,7 @@ import {
 }
 
 // Values
-pub fn handle_line(@jsonrpc.Endpoint, String) -> String?
+pub async fn handle_line(@jsonrpc.Endpoint, String) -> String?
 
 pub async fn run_lines(@jsonrpc.Endpoint) -> Unit
 

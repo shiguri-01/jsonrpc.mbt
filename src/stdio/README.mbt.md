@@ -17,14 +17,15 @@ struct StdioEchoResult {
 } derive(ToJson)
 
 ///|
-fn stdio_echo(
+#warnings("-67")
+async fn stdio_echo(
   params : StdioEchoParams,
 ) -> Result[StdioEchoResult, @rpc.RpcError] {
   Ok({ message: params.message })
 }
 
 ///|
-test "handle_line" {
+async test "handle_line" {
   let endpoint = @rpc.EndpointBuilder()
     .handle("echo", @rpc.typed(stdio_echo))
     .build()
@@ -40,5 +41,5 @@ test "handle_line" {
 Run the example with the native backend:
 
 ```sh
-moon -C examples run --target native stdio-example
+moon -C examples run stdio
 ```

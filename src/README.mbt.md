@@ -20,12 +20,13 @@ struct EchoResult {
 } derive(ToJson)
 
 ///|
-fn echo(params : EchoParams) -> Result[EchoResult, @jsonrpc.RpcError] {
+#warnings("-67")
+async fn echo(params : EchoParams) -> Result[EchoResult, @jsonrpc.RpcError] {
   Ok({ message: params.message })
 }
 
 ///|
-pub fn usage() -> Unit {
+pub async fn usage() -> Unit {
   let endpoint = @jsonrpc.EndpointBuilder()
     .handle("echo", @jsonrpc.typed(echo))
     .build()
@@ -60,7 +61,11 @@ struct Config {
 }
 
 ///|
-fn greet(config : Config, params : Json?) -> Result[Json, @jsonrpc.RpcError] {
+#warnings("-67")
+async fn greet(
+  config : Config,
+  params : Json?,
+) -> Result[Json, @jsonrpc.RpcError] {
   guard params is Some(Object({ "name": String(name), .. })) else {
     Err(@jsonrpc.invalid_params())
   }
@@ -72,7 +77,7 @@ pub fn configured_usage() -> Unit {
   let config : Config = { prefix: "hello" }
 
   let endpoint = @jsonrpc.EndpointBuilder()
-    .handle("greet", params => greet(config, params))
+    .handle("greet", async fn(params) { greet(config, params) })
     .build()
     .unwrap()
 

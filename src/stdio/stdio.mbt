@@ -13,7 +13,7 @@ fn stringify_outgoing(outgoing : Array[Json]) -> String? {
 /// Empty or whitespace-only lines produce no output. Non-empty lines are
 /// dispatched as complete JSON-RPC documents. Responses include the trailing
 /// newline that the stdio transport writes.
-pub fn handle_line(endpoint : @rpc.Endpoint, line : String) -> String? {
+pub async fn handle_line(endpoint : @rpc.Endpoint, line : String) -> String? {
   let request = line.trim().to_owned()
   if request == "" {
     None

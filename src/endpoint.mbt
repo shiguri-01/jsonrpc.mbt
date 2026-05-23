@@ -13,9 +13,9 @@ pub fn EndpointBuilder::EndpointBuilder() -> EndpointBuilder {
 
 ///|
 pub fn[P : @json.FromJson, R : ToJson] typed(
-  run : (P) -> Result[R, RpcError],
+  run : async (P) -> Result[R, RpcError],
 ) -> Handler {
-  params => {
+  async fn(params) {
     let decoded : P = match decode_params(params) {
       Ok(value) => value
       Err(error) => return Err(error)
@@ -158,7 +158,10 @@ pub fn Endpoint::notify(
 
 ///|
 /// Handle a raw JSON document.
-pub fn Endpoint::receive_text(self : Endpoint, input : String) -> ReceiveResult {
+pub async fn Endpoint::receive_text(
+  self : Endpoint,
+  input : String,
+) -> ReceiveResult {
   let value = @json.parse(input) catch {
     _ =>
       return {
@@ -172,7 +175,10 @@ pub fn Endpoint::receive_text(self : Endpoint, input : String) -> ReceiveResult 
 
 ///|
 /// Handle an already parsed JSON value.
-pub fn Endpoint::receive_json(self : Endpoint, value : Json) -> ReceiveResult {
+pub async fn Endpoint::receive_json(
+  self : Endpoint,
+  value : Json,
+) -> ReceiveResult {
   let result = ReceiveResult()
   match value {
     Array(items) => self.receive_batch(items, result)
@@ -184,7 +190,7 @@ pub fn Endpoint::receive_json(self : Endpoint, value : Json) -> ReceiveResult {
 }
 
 ///|
-fn Endpoint::receive_batch(
+async fn Endpoint::receive_batch(
   self : Endpoint,
   items : Array[Json],
   result : ReceiveResult,
@@ -202,7 +208,7 @@ fn Endpoint::receive_batch(
 }
 
 ///|
-fn Endpoint::receive_one(
+async fn Endpoint::receive_one(
   self : Endpoint,
   value : Json,
   result : ReceiveResult,
@@ -215,7 +221,7 @@ fn Endpoint::receive_one(
 }
 
 ///|
-fn Endpoint::receive_request_like(
+async fn Endpoint::receive_request_like(
   self : Endpoint,
   value : Json,
   result : ReceiveResult,

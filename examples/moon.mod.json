@@ -6,5 +6,6 @@
     "shiguri-01/jsonrpc": {
       "path": ".."
     }
-  }
+  },
+  "preferred-target": "native"
 }

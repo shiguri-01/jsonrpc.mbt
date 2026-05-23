@@ -2,6 +2,10 @@ import {
   "moonbitlang/core/json" @json,
 }
 
+import {
+  "moonbitlang/async",
+} for "test"
+
 options(
   "native-stub": [ "native_stub.c" ],
 )

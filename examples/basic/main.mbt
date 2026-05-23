@@ -22,17 +22,21 @@ struct EchoResult {
 } derive(ToJson)
 
 ///|
-fn subtract(params : SubtractParams) -> Result[SubtractResult, @rpc.RpcError] {
+async fn subtract(
+  params : SubtractParams,
+) -> Result[SubtractResult, @rpc.RpcError] {
+  @async.sleep(1)
   Ok({ value: params.minuend - params.subtrahend })
 }
 
 ///|
-fn echo(params : EchoParams) -> Result[EchoResult, @rpc.RpcError] {
+async fn echo(params : EchoParams) -> Result[EchoResult, @rpc.RpcError] {
+  @async.sleep(1)
   Ok({ message: params.message })
 }
 
 ///|
-fn main {
+async fn main {
   let endpoint = @rpc.EndpointBuilder()
     .handle("subtract", @rpc.typed(subtract))
     .handle("echo", @rpc.typed(echo))

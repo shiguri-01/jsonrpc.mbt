@@ -1,5 +1,6 @@
 ///|
-fn echo(params : Json?) -> Result[Json, @rpc.RpcError] {
+#warnings("-67")
+async fn echo(params : Json?) -> Result[Json, @rpc.RpcError] {
   Ok(params.unwrap_or(null))
 }
 
@@ -9,7 +10,7 @@ fn test_endpoint() -> @rpc.Endpoint {
 }
 
 ///|
-test "handle_line ignores empty lines" {
+async test "handle_line ignores empty lines" {
   guard handle_line(test_endpoint(), "\n") is None else {
     fail("empty line must produce no output")
   }
@@ -19,7 +20,7 @@ test "handle_line ignores empty lines" {
 }
 
 ///|
-test "handle_line writes one response line for one request line" {
+async test "handle_line writes one response line for one request line" {
   let input =
     #|{"jsonrpc":"2.0","method":"echo","params":{"message":"hello"},"id":1}
   let output = handle_line(test_endpoint(), "\{input}\n")
@@ -38,7 +39,7 @@ test "handle_line writes one response line for one request line" {
 }
 
 ///|
-test "handle_line writes one error line for malformed json" {
+async test "handle_line writes one error line for malformed json" {
   let output = handle_line(test_endpoint(), "{\"jsonrpc\":\n")
   guard output is Some(text) else { fail("parse error must produce output") }
   guard text.has_suffix("\n") else { fail("output must end with newline") }
@@ -55,7 +56,7 @@ test "handle_line writes one error line for malformed json" {
 }
 
 ///|
-test "handle_line suppresses notification output" {
+async test "handle_line suppresses notification output" {
   let input =
     #|{"jsonrpc":"2.0","method":"echo","params":{"message":"hello"}}
   guard handle_line(test_endpoint(), "\{input}\n") is None else {

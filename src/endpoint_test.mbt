@@ -1,5 +1,6 @@
 ///|
-fn response_json(endpoint : Endpoint, input : String) -> Json raise {
+#warnings("-67")
+async fn response_json(endpoint : Endpoint, input : String) -> Json {
   let result = endpoint.receive_text(input)
   guard result.outgoing is [response] else {
     fail("expected one outgoing response")
@@ -20,23 +21,27 @@ struct AddResult {
 } derive(ToJson)
 
 ///|
-fn add(params : AddParams) -> Result[AddResult, RpcError] {
+#warnings("-67")
+async fn add(params : AddParams) -> Result[AddResult, RpcError] {
   Ok({ value: params.left + params.right })
 }
 
 ///|
-fn add_tuple(params : (Int, Int)) -> Result[Int, RpcError] {
+#warnings("-67")
+async fn add_tuple(params : (Int, Int)) -> Result[Int, RpcError] {
   let (left, right) = params
   Ok(left + right)
 }
 
 ///|
-fn ping(_params : Unit) -> Result[String, RpcError] {
+#warnings("-67")
+async fn ping(_params : Unit) -> Result[String, RpcError] {
   Ok("pong")
 }
 
 ///|
-fn add_handler(params : Json?) -> Result[Json, RpcError] {
+#warnings("-67")
+async fn add_handler(params : Json?) -> Result[Json, RpcError] {
   match params {
     Some(Array([Number(a, ..), Number(b, ..)])) => Ok(Json::number(a + b))
     _ => Err(invalid_params())
@@ -44,7 +49,8 @@ fn add_handler(params : Json?) -> Result[Json, RpcError] {
 }
 
 ///|
-fn subtract_handler(params : Json?) -> Result[Json, RpcError] {
+#warnings("-67")
+async fn subtract_handler(params : Json?) -> Result[Json, RpcError] {
   match params {
     Some(Array([Number(minuend, ..), Number(subtrahend, ..)])) =>
       Ok(Json::number(minuend - subtrahend))
@@ -59,12 +65,14 @@ fn subtract_handler(params : Json?) -> Result[Json, RpcError] {
 }
 
 ///|
-fn ok_null(_params : Json?) -> Result[Json, RpcError] {
+#warnings("-67")
+async fn ok_null(_params : Json?) -> Result[Json, RpcError] {
   Ok(null)
 }
 
 ///|
-fn unavailable(_params : Json?) -> Result[Json, RpcError] {
+#warnings("-67")
+async fn unavailable(_params : Json?) -> Result[Json, RpcError] {
   Err(
     RpcError(
       -32042,
@@ -98,7 +106,7 @@ fn assert_error_code(response : Json, code : Double) -> Unit raise {
 }
 
 ///|
-test "builder registers raw and typed handlers" {
+async test "builder registers raw and typed handlers" {
   let endpoint = @jsonrpc.EndpointBuilder()
     .handle("add", typed(add))
     .handle("tuple/add", typed(add_tuple))
@@ -138,7 +146,7 @@ test "builder registers raw and typed handlers" {
 }
 
 ///|
-test "typed decode failures become invalid params" {
+async test "typed decode failures become invalid params" {
   let endpoint = @jsonrpc.EndpointBuilder()
     .handle("add", typed(add))
     .build()
@@ -160,7 +168,7 @@ test "typed decode failures become invalid params" {
 }
 
 ///|
-test "notification produces no outgoing response" {
+async test "notification produces no outgoing response" {
   let request =
     #|{"jsonrpc":"2.0","method":"add","params":[2,3]}
   let result = test_endpoint().receive_text(request)
@@ -173,7 +181,7 @@ test "notification produces no outgoing response" {
 }
 
 ///|
-test "request id null is preserved for incoming calls" {
+async test "request id null is preserved for incoming calls" {
   let request =
     #|{"jsonrpc":"2.0","method":"add","params":[2,3],"id":null}
   let response = response_json(test_endpoint(), request)
@@ -185,7 +193,7 @@ test "request id null is preserved for incoming calls" {
 }
 
 ///|
-test "method not found and parse errors are protocol errors" {
+async test "method not found and parse errors are protocol errors" {
   let endpoint = test_endpoint()
   let missing_request =
     #|{"jsonrpc":"2.0","method":"missing","id":"x"}
@@ -205,7 +213,7 @@ test "method not found and parse errors are protocol errors" {
 }
 
 ///|
-test "batch receive accumulates outgoing messages in order" {
+async test "batch receive accumulates outgoing messages in order" {
   let request =
     #|[
     #|  {"jsonrpc":"2.0","method":"subtract","params":[42,23],"id":1},
@@ -231,7 +239,7 @@ test "batch receive accumulates outgoing messages in order" {
 }
 
 ///|
-test "empty batch returns invalid request response" {
+async test "empty batch returns invalid request response" {
   let response = response_json(test_endpoint(), "[]")
   assert_error_code(response, -32600.0)
   guard response is Object(obj) else { fail("response must be object") }
@@ -239,7 +247,7 @@ test "empty batch returns invalid request response" {
 }
 
 ///|
-test "outgoing request auto id and completion" {
+async test "outgoing request auto id and completion" {
   let endpoint = test_endpoint()
   let request = endpoint
     .request("remote/add", params=Json::array([Json::number(2.0)]))
@@ -298,7 +306,7 @@ test "explicit id and duplicate pending id" {
 }
 
 ///|
-test "unexpected responses are observable" {
+async test "unexpected responses are observable" {
   let response =
     #|{"jsonrpc":"2.0","result":1,"id":99}
   let result = test_endpoint().receive_text(response)
@@ -311,7 +319,7 @@ test "unexpected responses are observable" {
 }
 
 ///|
-test "request with extra result member is still a request" {
+async test "request with extra result member is still a request" {
   let request =
     #|{"jsonrpc":"2.0","method":"add","params":[2,3],"result":0,"id":1}
   let response = response_json(test_endpoint(), request)
@@ -322,7 +330,7 @@ test "request with extra result member is still a request" {
 }
 
 ///|
-test "malformed response is unexpected and receives no response" {
+async test "malformed response is unexpected and receives no response" {
   let response =
     #|{"jsonrpc":"2.0","result":1,"error":{"code":-32000,"message":"bad"},"id":99}
   let result = test_endpoint().receive_text(response)
@@ -335,7 +343,7 @@ test "malformed response is unexpected and receives no response" {
 }
 
 ///|
-test "response id null is unexpected" {
+async test "response id null is unexpected" {
   let response =
     #|{"jsonrpc":"2.0","result":1,"id":null}
   let result = test_endpoint().receive_text(response)
