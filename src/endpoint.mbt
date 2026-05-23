@@ -13,34 +13,29 @@ pub fn EndpointBuilder::EndpointBuilder() -> EndpointBuilder {
 
 ///|
 pub fn[P : @json.FromJson, R : ToJson] typed(
-  run : async (P) -> Result[R, RpcError],
+  run : async (P) -> R raise RpcError,
 ) -> Handler {
-  async fn(params) {
-    let decoded : P = match decode_params(params) {
-      Ok(value) => value
-      Err(error) => return Err(error)
-    }
-    match run(decoded) {
-      Ok(result) => Ok(result.to_json())
-      Err(error) => Err(error)
-    }
+  async fn(params) -> Json raise RpcError {
+    let decoded : P = decode_params(params)
+    run(decoded).to_json()
   }
 }
 
 ///|
-fn[P : @json.FromJson] decode_params(params : Json?) -> Result[P, RpcError] {
+fn[P : @json.FromJson] decode_params(params : Json?) -> P raise RpcError {
   let value = params.unwrap_or(null)
-  let decoded : P = @json.from_json(value) catch {
+  @json.from_json(value) catch {
     JsonDecodeError((path, message)) => {
       let data : Map[String, Json] = {}
       data["path"] = path.to_json()
       data["message"] = Json::string(message)
-      return Err(
-        RpcError(invalid_params_code, "Invalid params", data=Json::object(data)),
+      raise RpcErrorWithData(
+        code=INVALID_PARAMS_CODE,
+        message="Invalid params",
+        data=Json::object(data),
       )
     }
   }
-  Ok(decoded)
 }
 
 ///|
@@ -165,7 +160,11 @@ pub async fn Endpoint::receive_text(
   let value = @json.parse(input) catch {
     _ =>
       return {
-        outgoing: [unknown_id_error(RpcError(parse_error_code, "Parse error"))],
+        outgoing: [
+          unknown_id_error(
+            RpcError(code=PARSE_ERROR_CODE, message="Parse error"),
+          ),
+        ],
         completed: [],
         unexpected: [],
       }
@@ -197,7 +196,9 @@ async fn Endpoint::receive_batch(
 ) -> ReceiveResult {
   if items.is_empty() {
     result.outgoing.push(
-      unknown_id_error(RpcError(invalid_request_code, "Invalid Request")),
+      unknown_id_error(
+        RpcError(code=INVALID_REQUEST_CODE, message="Invalid Request"),
+      ),
     )
     return result
   }
@@ -243,12 +244,13 @@ async fn Endpoint::receive_request_like(
         return result.outgoing.push(
           error_response(
             id,
-            RpcError(method_not_found_code, "Method not found"),
+            RpcError(code=METHOD_NOT_FOUND_CODE, message="Method not found"),
           ),
         )
       }
   }
-  match handler(request.params) {
+  let handler_result = try? handler(request.params)
+  match handler_result {
     Ok(json_result) =>
       if request.notification {
         ()

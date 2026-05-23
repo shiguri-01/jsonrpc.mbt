@@ -21,64 +21,62 @@ struct AddResult {
 } derive(ToJson)
 
 ///|
-#warnings("-67")
-async fn add(params : AddParams) -> Result[AddResult, RpcError] {
-  Ok({ value: params.left + params.right })
+#warnings("-67-24")
+async fn add(params : AddParams) -> AddResult raise RpcError {
+  { value: params.left + params.right }
 }
 
 ///|
-#warnings("-67")
-async fn add_tuple(params : (Int, Int)) -> Result[Int, RpcError] {
+#warnings("-67-24")
+async fn add_tuple(params : (Int, Int)) -> Int raise RpcError {
   let (left, right) = params
-  Ok(left + right)
+  left + right
+}
+
+///|
+#warnings("-67-24")
+async fn ping(_params : Unit) -> String raise RpcError {
+  "pong"
 }
 
 ///|
 #warnings("-67")
-async fn ping(_params : Unit) -> Result[String, RpcError] {
-  Ok("pong")
-}
-
-///|
-#warnings("-67")
-async fn add_handler(params : Json?) -> Result[Json, RpcError] {
+async fn add_handler(params : Json?) -> Json raise RpcError {
   match params {
-    Some(Array([Number(a, ..), Number(b, ..)])) => Ok(Json::number(a + b))
-    _ => Err(invalid_params())
+    Some(Array([Number(a, ..), Number(b, ..)])) => Json::number(a + b)
+    _ => raise invalid_params()
   }
 }
 
 ///|
 #warnings("-67")
-async fn subtract_handler(params : Json?) -> Result[Json, RpcError] {
+async fn subtract_handler(params : Json?) -> Json raise RpcError {
   match params {
     Some(Array([Number(minuend, ..), Number(subtrahend, ..)])) =>
-      Ok(Json::number(minuend - subtrahend))
+      Json::number(minuend - subtrahend)
     Some(Object(obj)) =>
       match (obj.get("minuend"), obj.get("subtrahend")) {
         (Some(Number(minuend, ..)), Some(Number(subtrahend, ..))) =>
-          Ok(Json::number(minuend - subtrahend))
-        _ => Err(invalid_params())
+          Json::number(minuend - subtrahend)
+        _ => raise invalid_params()
       }
-    _ => Err(invalid_params())
+    _ => raise invalid_params()
   }
 }
 
 ///|
-#warnings("-67")
-async fn ok_null(_params : Json?) -> Result[Json, RpcError] {
-  Ok(null)
+#warnings("-67-24")
+async fn ok_null(_params : Json?) -> Json raise RpcError {
+  null
 }
 
 ///|
 #warnings("-67")
-async fn unavailable(_params : Json?) -> Result[Json, RpcError] {
-  Err(
-    RpcError(
-      -32042,
-      "Temporarily unavailable",
-      data=Json::string("retry later"),
-    ),
+async fn unavailable(_params : Json?) -> Json raise RpcError {
+  raise RpcErrorWithData(
+    code=-32042,
+    message="Temporarily unavailable",
+    data=Json::string("retry later"),
   )
 }
 
@@ -154,7 +152,7 @@ async test "typed decode failures become invalid params" {
   let request =
     #|{"jsonrpc":"2.0","method":"add","params":{"left":"two","right":3},"id":1}
   let response = response_json(endpoint, request)
-  assert_error_code(response, -32602.0)
+  assert_error_code(response, INVALID_PARAMS_CODE.to_double())
   guard response is Object(obj) else { fail("response must be object") }
   guard obj.get("error") is Some(Object(error)) else {
     fail("must include error")
@@ -198,14 +196,14 @@ async test "method not found and parse errors are protocol errors" {
   let missing_request =
     #|{"jsonrpc":"2.0","method":"missing","id":"x"}
   let missing = response_json(endpoint, missing_request)
-  assert_error_code(missing, -32601.0)
+  assert_error_code(missing, METHOD_NOT_FOUND_CODE.to_double())
   guard missing is Object(missing_obj) else { fail("response must be object") }
   guard missing_obj.get("id") is Some(String("x")) else {
     fail("id must be preserved")
   }
 
   let parse_error = response_json(endpoint, "{\"jsonrpc\":")
-  assert_error_code(parse_error, -32700.0)
+  assert_error_code(parse_error, PARSE_ERROR_CODE.to_double())
   guard parse_error is Object(parse_obj) else {
     fail("response must be object")
   }
@@ -231,7 +229,7 @@ async test "batch receive accumulates outgoing messages in order" {
   guard first.get("result") is Some(Number(19.0, ..)) else {
     fail("first result must be 19")
   }
-  assert_error_code(result.outgoing[1], -32600.0)
+  assert_error_code(result.outgoing[1], INVALID_REQUEST_CODE.to_double())
   guard result.outgoing[2] is Object(last) else { fail("last must be object") }
   guard last.get("result") is Some(Number(-19.0, ..)) else {
     fail("last result must be -19")
@@ -241,7 +239,7 @@ async test "batch receive accumulates outgoing messages in order" {
 ///|
 async test "empty batch returns invalid request response" {
   let response = response_json(test_endpoint(), "[]")
-  assert_error_code(response, -32600.0)
+  assert_error_code(response, INVALID_REQUEST_CODE.to_double())
   guard response is Object(obj) else { fail("response must be object") }
   guard obj.get("id") is Some(Null) else { fail("id must be null") }
 }

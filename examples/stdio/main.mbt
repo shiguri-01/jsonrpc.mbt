@@ -10,9 +10,9 @@ struct EchoResult {
 } derive(ToJson)
 
 ///|
-async fn echo(params : EchoParams) -> Result[EchoResult, @rpc.RpcError] {
-  @async.sleep(1)
-  Ok({ message: params.message })
+#warnings("-67-24")
+async fn echo(params : EchoParams) -> EchoResult raise @rpc.RpcError {
+  { message: params.message }
 }
 
 ///|

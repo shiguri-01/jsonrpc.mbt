@@ -7,25 +7,30 @@ import {
 }
 
 // Values
+pub const INTERNAL_ERROR_CODE : Int = -32603
+
+pub const INVALID_PARAMS_CODE : Int = -32602
+
+pub const INVALID_REQUEST_CODE : Int = -32600
+
+pub const METHOD_NOT_FOUND_CODE : Int = -32601
+
+pub const PARSE_ERROR_CODE : Int = -32700
+
 pub fn batch(Array[Json]) -> Json
 
 pub fn internal_error(message? : String) -> RpcError
 
-pub let internal_error_code : Int
-
 pub fn invalid_params(message? : String) -> RpcError
 
-pub let invalid_params_code : Int
-
-pub let invalid_request_code : Int
-
-pub let method_not_found_code : Int
-
-pub let parse_error_code : Int
-
-pub fn[P : @json.FromJson, R : ToJson] typed(async (P) -> Result[R, RpcError]) -> async (Json?) -> Result[Json, RpcError]
+pub fn[P : @json.FromJson, R : ToJson] typed(async (P) -> R raise RpcError) -> async (Json?) -> Json raise RpcError
 
 // Errors
+pub(all) suberror RpcError {
+  RpcError(code~ : Int, message~ : String)
+  RpcErrorWithData(code~ : Int, message~ : String, data~ : Json)
+} derive(Eq, @debug.Debug)
+pub fn RpcError::to_json(Self) -> Json
 
 // Types and methods
 pub(all) struct CompletedRequest {
@@ -47,7 +52,7 @@ pub struct EndpointBuilder {
 }
 pub fn EndpointBuilder::EndpointBuilder() -> Self
 pub fn EndpointBuilder::build(Self) -> Result[Endpoint, EndpointError]
-pub fn EndpointBuilder::handle(Self, String, async (Json?) -> Result[Json, RpcError]) -> Self
+pub fn EndpointBuilder::handle(Self, String, async (Json?) -> Json raise RpcError) -> Self
 
 pub(all) enum EndpointError {
   DuplicatePendingId(Id)
@@ -78,16 +83,8 @@ type RequestError derive(Eq, @debug.Debug)
 
 type Response derive(Eq, @debug.Debug)
 
-pub(all) struct RpcError {
-  code : Int
-  message : String
-  data : Json?
-} derive(Eq, @debug.Debug)
-pub fn RpcError::RpcError(Int, String, data? : Json) -> Self
-pub fn RpcError::to_json(Self) -> Json
-
 // Type aliases
-pub type Handler = async (Json?) -> Result[Json, RpcError]
+pub type Handler = async (Json?) -> Json raise RpcError
 
 // Traits
 

@@ -17,11 +17,11 @@ struct StdioEchoResult {
 } derive(ToJson)
 
 ///|
-#warnings("-67")
+#warnings("-67-24")
 async fn stdio_echo(
   params : StdioEchoParams,
-) -> Result[StdioEchoResult, @rpc.RpcError] {
-  Ok({ message: params.message })
+) -> StdioEchoResult raise @rpc.RpcError {
+  { message: params.message }
 }
 
 ///|

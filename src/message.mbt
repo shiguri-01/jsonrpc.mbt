@@ -2,9 +2,9 @@
 /// Low-level JSON-RPC method handler.
 ///
 /// The argument is the request `params` member, or `None` when `params` is
-/// absent. Return `Ok(result)` for a normal JSON-RPC result, or `Err(error)` to
-/// send a JSON-RPC error response for calls with an id.
-pub type Handler = async (Json?) -> Result[Json, RpcError]
+/// absent. Return a JSON-RPC result value, or raise `RpcError` to send a
+/// JSON-RPC error response for calls with an id.
+pub type Handler = async (Json?) -> Json raise RpcError
 
 ///|
 /// JSON-RPC request id used for local request correlation.
@@ -64,7 +64,7 @@ fn is_valid_id(value : Json) -> Bool {
 
 ///|
 fn request_error(id : Json?) -> RequestError {
-  { id, error: RpcError(invalid_request_code, "Invalid Request") }
+  { id, error: RpcError(code=INVALID_REQUEST_CODE, message="Invalid Request") }
 }
 
 ///|

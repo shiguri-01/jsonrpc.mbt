@@ -1,7 +1,7 @@
 ///|
-#warnings("-67")
-async fn echo(params : Json?) -> Result[Json, @rpc.RpcError] {
-  Ok(params.unwrap_or(null))
+#warnings("-67-24")
+async fn echo(params : Json?) -> Json raise @rpc.RpcError {
+  params.unwrap_or(null)
 }
 
 ///|

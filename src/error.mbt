@@ -1,60 +1,53 @@
 ///|
 /// JSON-RPC 2.0 error code for parse failures.
-pub let parse_error_code : Int = -32700
+pub const PARSE_ERROR_CODE : Int = -32700
 
 ///|
 /// JSON-RPC 2.0 error code for structurally invalid requests.
-pub let invalid_request_code : Int = -32600
+pub const INVALID_REQUEST_CODE : Int = -32600
 
 ///|
 /// JSON-RPC 2.0 error code for unknown methods.
-pub let method_not_found_code : Int = -32601
+pub const METHOD_NOT_FOUND_CODE : Int = -32601
 
 ///|
 /// JSON-RPC 2.0 error code for invalid method parameters.
-pub let invalid_params_code : Int = -32602
+pub const INVALID_PARAMS_CODE : Int = -32602
 
 ///|
 /// JSON-RPC 2.0 error code for unexpected server failures.
-pub let internal_error_code : Int = -32603
+pub const INTERNAL_ERROR_CODE : Int = -32603
 
 ///|
 /// Error returned by a method handler.
-pub(all) struct RpcError {
-  code : Int
-  message : String
-  data : Json?
+pub(all) suberror RpcError {
+  RpcError(code~ : Int, message~ : String)
+  RpcErrorWithData(code~ : Int, message~ : String, data~ : Json)
 } derive(Eq, Debug)
-
-///|
-/// Construct an RPC error value.
-pub fn RpcError::RpcError(
-  code : Int,
-  message : String,
-  data? : Json,
-) -> RpcError {
-  { code, message, data }
-}
 
 ///|
 /// Standard "Invalid params" error.
 pub fn invalid_params(message? : String = "Invalid params") -> RpcError {
-  RpcError(invalid_params_code, message)
+  RpcError(code=INVALID_PARAMS_CODE, message~)
 }
 
 ///|
 /// Standard "Internal error" error.
 pub fn internal_error(message? : String = "Internal error") -> RpcError {
-  RpcError(internal_error_code, message)
+  RpcError(code=INTERNAL_ERROR_CODE, message~)
 }
 
 ///|
 /// Convert an error to the JSON-RPC error object shape.
 pub fn RpcError::to_json(self : RpcError) -> Json {
+  let (code, message, data) = match self {
+    RpcError(code~, message~) => (code, message, None)
+    RpcErrorWithData(code~, message~, data~) => (code, message, Some(data))
+  }
   let obj : Map[String, Json] = {}
-  obj["code"] = Json::number(self.code.to_double())
-  obj["message"] = Json::string(self.message)
-  if self.data is Some(data) {
+  obj["code"] = Json::number(code.to_double())
+  obj["message"] = Json::string(message)
+  if data is Some(data) {
     obj["data"] = data
   }
   Json::object(obj)
@@ -73,8 +66,8 @@ fn rpc_error_from_json(value : Json) -> RpcError? {
   }
   Some(
     match obj.get("data") {
-      Some(data) => RpcError(code, message, data~)
-      None => RpcError(code, message)
+      Some(data) => RpcErrorWithData(code~, message~, data~)
+      None => RpcError(code~, message~)
     },
   )
 }

@@ -20,9 +20,9 @@ struct EchoResult {
 } derive(ToJson)
 
 ///|
-#warnings("-67")
-async fn echo(params : EchoParams) -> Result[EchoResult, @jsonrpc.RpcError] {
-  Ok({ message: params.message })
+#warnings("-67-24")
+async fn echo(params : EchoParams) -> EchoResult raise @jsonrpc.RpcError {
+  { message: params.message }
 }
 
 ///|
@@ -62,14 +62,11 @@ struct Config {
 
 ///|
 #warnings("-67")
-async fn greet(
-  config : Config,
-  params : Json?,
-) -> Result[Json, @jsonrpc.RpcError] {
+async fn greet(config : Config, params : Json?) -> Json raise @jsonrpc.RpcError {
   guard params is Some(Object({ "name": String(name), .. })) else {
-    Err(@jsonrpc.invalid_params())
+    raise @jsonrpc.invalid_params()
   }
-  Ok(Json::string("\{config.prefix}, \{name}"))
+  Json::string("\{config.prefix}, \{name}")
 }
 
 ///|
@@ -77,7 +74,9 @@ pub fn configured_usage() -> Unit {
   let config : Config = { prefix: "hello" }
 
   let endpoint = @jsonrpc.EndpointBuilder()
-    .handle("greet", async fn(params) { greet(config, params) })
+    .handle("greet", async fn(params) -> Json raise @jsonrpc.RpcError {
+      greet(config, params)
+    })
     .build()
     .unwrap()
 
