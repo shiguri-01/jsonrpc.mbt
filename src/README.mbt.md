@@ -30,7 +30,6 @@ pub async fn usage() -> Unit {
   let endpoint = @jsonrpc.EndpointBuilder()
     .handle("echo", @jsonrpc.typed(echo))
     .build()
-    .unwrap()
 
   let received = endpoint.receive_text(
     (
@@ -38,9 +37,9 @@ pub async fn usage() -> Unit {
     ),
   )
 
-  let request = endpoint.request("workspace/configuration").unwrap()
+  let request = endpoint.request("workspace/configuration")
 
-  let notification = endpoint.notify("window/logMessage", params=null).unwrap()
+  let notification = endpoint.notify("window/logMessage", params=null)
 
   // In an application, write these JSON values to your transport.
   ignore(received)
@@ -70,7 +69,7 @@ async fn greet(config : Config, params : Json?) -> Json raise @jsonrpc.RpcError 
 }
 
 ///|
-pub fn configured_usage() -> Unit {
+pub fn configured_usage() -> Unit raise @jsonrpc.EndpointError {
   let config : Config = { prefix: "hello" }
 
   let endpoint = @jsonrpc.EndpointBuilder()
@@ -78,7 +77,6 @@ pub fn configured_usage() -> Unit {
       greet(config, params)
     })
     .build()
-    .unwrap()
 
   // Reuse the endpoint from the transport loop that drives your application.
   ignore(endpoint)

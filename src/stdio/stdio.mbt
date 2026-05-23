@@ -15,12 +15,9 @@ fn stringify_outgoing(outgoing : Array[Json]) -> String? {
 /// newline that the stdio transport writes.
 pub async fn handle_line(endpoint : @rpc.Endpoint, line : String) -> String? {
   let request = line.trim().to_owned()
-  if request == "" {
-    None
-  } else {
-    let result = endpoint.receive_text(request)
-    stringify_outgoing(result.outgoing).map(response => "\{response}\n")
-  }
+  guard request != "" else { None }
+  let result = endpoint.receive_text(request)
+  stringify_outgoing(result.outgoing).map(response => "\{response}\n")
 }
 
 ///|
@@ -30,9 +27,8 @@ pub async fn handle_line(endpoint : @rpc.Endpoint, line : String) -> String? {
 /// Responses are written as one line. Notifications produce no output.
 pub async fn run_lines(endpoint : @rpc.Endpoint) -> Unit {
   while @async_stdio.stdin.read_until("\n") is Some(line) {
-    match handle_line(endpoint, line) {
-      Some(response) => @async_stdio.stdout.write(response)
-      None => ()
+    if handle_line(endpoint, line) is Some(response) {
+      @async_stdio.stdout.write(response)
     }
   }
 }

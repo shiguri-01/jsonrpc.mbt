@@ -5,8 +5,8 @@ async fn echo(params : Json?) -> Json raise @rpc.RpcError {
 }
 
 ///|
-fn test_endpoint() -> @rpc.Endpoint {
-  @rpc.EndpointBuilder().handle("echo", echo).build().unwrap()
+fn test_endpoint() -> @rpc.Endpoint raise @rpc.EndpointError {
+  @rpc.EndpointBuilder().handle("echo", echo).build()
 }
 
 ///|

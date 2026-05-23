@@ -14,7 +14,7 @@ pub(all) enum Id {
 } derive(Eq, Hash, Debug)
 
 ///|
-pub fn Id::to_json(self : Id) -> Json {
+pub impl ToJson for Id with to_json(self) {
   match self {
     String(value) => Json::string(value)
     Number(value) => Json::number(value.to_double())
@@ -22,18 +22,18 @@ pub fn Id::to_json(self : Id) -> Json {
 }
 
 ///|
-fn id_from_json(value : Json) -> Id? {
+pub impl @json.FromJson for Id with from_json(value, path) {
   match value {
-    String(value) => Some(String(value))
+    String(value) => String(value)
     Number(value, ..) => {
       let int = value.to_int()
-      if int.to_double() == value {
-        Some(Number(int))
-      } else {
-        None
+      guard int.to_double() == value else {
+        raise JsonDecodeError((path, "Id::from_json: expected integer id"))
       }
+      Number(int)
     }
-    _ => None
+    _ =>
+      raise JsonDecodeError((path, "Id::from_json: expected string or number"))
   }
 }
 
@@ -48,10 +48,21 @@ struct Request {
 
 ///|
 /// Request parsing failure plus any valid id that could still be detected.
-struct RequestError {
-  id : Json?
-  error : RpcError
+suberror RequestError {
+  RequestError(id~ : Json?, error~ : RpcError)
 } derive(Eq, Debug)
+
+///|
+fn Request::response_id(self : Request) -> Json {
+  self.id.unwrap_or(null)
+}
+
+///|
+fn RequestError::response_id(self : RequestError) -> Json {
+  match self {
+    RequestError(id~, ..) => id.unwrap_or(null)
+  }
+}
 
 ///|
 /// Return true when a JSON value is a legal JSON-RPC request id.
@@ -64,63 +75,50 @@ fn is_valid_id(value : Json) -> Bool {
 
 ///|
 fn request_error(id : Json?) -> RequestError {
-  { id, error: RpcError(code=INVALID_REQUEST_CODE, message="Invalid Request") }
+  RequestError(
+    id~,
+    error=RpcError(code=INVALID_REQUEST_CODE, message="Invalid Request"),
+  )
 }
 
 ///|
 fn detect_id(obj : Map[String, Json]) -> Json? {
-  match obj.get("id") {
-    Some(id) => if is_valid_id(id) { Some(id) } else { None }
-    None => None
-  }
+  guard obj is { "id": id, .. } else { None }
+  guard is_valid_id(id) else { None }
+  Some(id)
 }
 
 ///|
 /// Convert a JSON value to a validated request object.
-fn parse_request(value : Json) -> Result[Request, RequestError] {
-  guard value is Object(obj) else { return Err(request_error(None)) }
+fn parse_request(value : Json) -> Request raise RequestError {
+  guard value is Object(obj) else { raise request_error(None) }
   let detected_id = detect_id(obj)
-  guard obj.get("jsonrpc") is Some(String("2.0")) else {
-    return Err(request_error(detected_id))
+  guard obj is { "jsonrpc": String("2.0"), "method": String(rpc_method), .. } else {
+    raise request_error(detected_id)
   }
-  let rpc_method = match obj.get("method") {
-    Some(String(name)) => name
-    _ => return Err(request_error(detected_id))
+  let params = match obj {
+    { "params": Array(_) | Object(_) as params, .. } => Some(params)
+    { "params": _, .. } => raise request_error(detected_id)
+    _ => None
   }
-  let params = match obj.get("params") {
-    None => None
-    Some(Array(_) as params) => Some(params)
-    Some(Object(_) as params) => Some(params)
-    Some(_) => return Err(request_error(detected_id))
+  let id = match obj {
+    { "id": id, .. } if is_valid_id(id) => Some(id)
+    { "id": _, .. } => raise request_error(None)
+    _ => None
   }
-  let id = match obj.get("id") {
-    None => None
-    Some(id) =>
-      if is_valid_id(id) {
-        Some(id)
-      } else {
-        return Err(request_error(None))
-      }
-  }
-  Ok({ id, rpc_method, params, notification: id is None })
+  { id, rpc_method, params, notification: id is None }
 }
 
 ///|
 fn success_response(id : Json, result : Json) -> Json {
-  let obj : Map[String, Json] = {}
-  obj["jsonrpc"] = Json::string("2.0")
-  obj["result"] = result
-  obj["id"] = id
-  Json::object(obj)
+  let response : Response = { id, result: Ok(result) }
+  response.to_json()
 }
 
 ///|
 fn error_response(id : Json, error : RpcError) -> Json {
-  let obj : Map[String, Json] = {}
-  obj["jsonrpc"] = Json::string("2.0")
-  obj["error"] = error.to_json()
-  obj["id"] = id
-  Json::object(obj)
+  let response : Response = { id, result: Err(error) }
+  response.to_json()
 }
 
 ///|
@@ -137,13 +135,10 @@ enum MessageKind {
 
 ///|
 fn classify_message(value : Json) -> MessageKind {
-  guard value is Object(obj) else { return InvalidLike }
-  if obj.get("method") is Some(_) {
-    RequestLike
-  } else if obj.get("result") is Some(_) || obj.get("error") is Some(_) {
-    ResponseLike
-  } else {
-    InvalidLike
+  match value {
+    Object({ "method": _, .. }) => RequestLike
+    Object({ "result": _, .. }) | Object({ "error": _, .. }) => ResponseLike
+    _ => InvalidLike
   }
 }
 
@@ -154,21 +149,32 @@ struct Response {
 } derive(Eq, Debug)
 
 ///|
-fn parse_response(value : Json) -> Response? {
-  guard value is Object(obj) else { return None }
-  guard obj.get("jsonrpc") is Some(String("2.0")) else { return None }
-  let id = match obj.get("id") {
-    Some(value) => value
-    None => return None
+impl ToJson for Response with to_json(self) {
+  let obj : Map[String, Json] = { "jsonrpc": "2.0", "id": self.id }
+  match self.result {
+    Ok(result) => obj["result"] = result
+    Err(error) => obj["error"] = error.to_json()
   }
-  match (obj.get("result"), obj.get("error")) {
-    (Some(result), None) => Some({ id, result: Ok(result) })
-    (None, Some(error_json)) =>
-      match rpc_error_from_json(error_json) {
-        Some(error) => Some({ id, result: Err(error) })
-        None => None
-      }
-    _ => None
+  Json::object(obj)
+}
+
+///|
+impl @json.FromJson for Response with from_json(value, path) {
+  match value {
+    Object({ "jsonrpc": String("2.0"), "id": _, "result": _, "error": _, .. }) =>
+      raise JsonDecodeError(
+        (path, "Response::from_json: result and error are mutually exclusive"),
+      )
+    Object({ "jsonrpc": String("2.0"), "id": id, "result": result, .. }) =>
+      { id, result: Ok(result) }
+    Object({ "jsonrpc": String("2.0"), "id": id, "error": error_json, .. }) => {
+      let error : RpcError = @json.from_json(error_json, path~)
+      { id, result: Err(error) }
+    }
+    _ =>
+      raise JsonDecodeError(
+        (path, "Response::from_json: expected response object"),
+      )
   }
 }
 

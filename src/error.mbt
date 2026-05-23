@@ -39,14 +39,15 @@ pub fn internal_error(message? : String = "Internal error") -> RpcError {
 
 ///|
 /// Convert an error to the JSON-RPC error object shape.
-pub fn RpcError::to_json(self : RpcError) -> Json {
+pub impl ToJson for RpcError with to_json(self) {
   let (code, message, data) = match self {
     RpcError(code~, message~) => (code, message, None)
     RpcErrorWithData(code~, message~, data~) => (code, message, Some(data))
   }
-  let obj : Map[String, Json] = {}
-  obj["code"] = Json::number(code.to_double())
-  obj["message"] = Json::string(message)
+  let obj : Map[String, Json] = {
+    "code": Json::number(code.to_double()),
+    "message": Json::string(message),
+  }
   if data is Some(data) {
     obj["data"] = data
   }
@@ -54,26 +55,32 @@ pub fn RpcError::to_json(self : RpcError) -> Json {
 }
 
 ///|
-fn rpc_error_from_json(value : Json) -> RpcError? {
-  guard value is Object(obj) else { return None }
-  let code = match obj.get("code") {
-    Some(Number(value, ..)) => value.to_int()
-    _ => return None
+pub impl @json.FromJson for RpcError with from_json(value, path) {
+  match value {
+    Object(
+      {
+        "code": Number(code_value, ..),
+        "message": String(message),
+        "data": data,
+        ..
+      }
+    ) => {
+      let code = code_value.to_int()
+      RpcErrorWithData(code~, message~, data~)
+    }
+    Object({ "code": Number(code_value, ..), "message": String(message), .. }) => {
+      let code = code_value.to_int()
+      RpcError(code~, message~)
+    }
+    _ =>
+      raise JsonDecodeError(
+        (path, "RpcError::from_json: expected error object"),
+      )
   }
-  let message = match obj.get("message") {
-    Some(String(value)) => value
-    _ => return None
-  }
-  Some(
-    match obj.get("data") {
-      Some(data) => RpcErrorWithData(code~, message~, data~)
-      None => RpcError(code~, message~)
-    },
-  )
 }
 
 ///|
-pub(all) enum EndpointError {
+pub(all) suberror EndpointError {
   DuplicatePendingId(Id)
   DuplicateMethod(String)
   ReservedMethod(String)

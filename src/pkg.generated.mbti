@@ -26,11 +26,21 @@ pub fn invalid_params(message? : String) -> RpcError
 pub fn[P : @json.FromJson, R : ToJson] typed(async (P) -> R raise RpcError) -> async (Json?) -> Json raise RpcError
 
 // Errors
+pub(all) suberror EndpointError {
+  DuplicatePendingId(Id)
+  DuplicateMethod(String)
+  ReservedMethod(String)
+  InvalidMethod(String)
+} derive(Eq, @debug.Debug)
+
+type RequestError derive(Eq, @debug.Debug)
+
 pub(all) suberror RpcError {
   RpcError(code~ : Int, message~ : String)
   RpcErrorWithData(code~ : Int, message~ : String, data~ : Json)
 } derive(Eq, @debug.Debug)
-pub fn RpcError::to_json(Self) -> Json
+pub impl ToJson for RpcError
+pub impl @json.FromJson for RpcError
 
 // Types and methods
 pub(all) struct CompletedRequest {
@@ -42,30 +52,24 @@ pub(all) struct CompletedRequest {
 pub struct Endpoint {
   // private fields
 }
-pub fn Endpoint::notify(Self, String, params? : Json) -> Result[Json, EndpointError]
+pub fn Endpoint::notify(Self, String, params? : Json) -> Json raise EndpointError
 pub async fn Endpoint::receive_json(Self, Json) -> ReceiveResult
 pub async fn Endpoint::receive_text(Self, String) -> ReceiveResult
-pub fn Endpoint::request(Self, String, params? : Json, id? : Id) -> Result[Json, EndpointError]
+pub fn Endpoint::request(Self, String, params? : Json, id? : Id) -> Json raise EndpointError
 
 pub struct EndpointBuilder {
   // private fields
 }
 pub fn EndpointBuilder::EndpointBuilder() -> Self
-pub fn EndpointBuilder::build(Self) -> Result[Endpoint, EndpointError]
+pub fn EndpointBuilder::build(Self) -> Endpoint raise EndpointError
 pub fn EndpointBuilder::handle(Self, String, async (Json?) -> Json raise RpcError) -> Self
-
-pub(all) enum EndpointError {
-  DuplicatePendingId(Id)
-  DuplicateMethod(String)
-  ReservedMethod(String)
-  InvalidMethod(String)
-} derive(Eq, @debug.Debug)
 
 pub(all) enum Id {
   String(String)
   Number(Int)
 } derive(Eq, Hash, @debug.Debug)
-pub fn Id::to_json(Self) -> Json
+pub impl ToJson for Id
+pub impl @json.FromJson for Id
 
 type MessageKind derive(Eq, @debug.Debug)
 
@@ -78,8 +82,6 @@ pub(all) struct ReceiveResult {
 } derive(Eq, @debug.Debug)
 
 type Request derive(Eq, @debug.Debug)
-
-type RequestError derive(Eq, @debug.Debug)
 
 type Response derive(Eq, @debug.Debug)
 

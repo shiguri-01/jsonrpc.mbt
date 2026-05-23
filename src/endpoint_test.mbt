@@ -54,12 +54,15 @@ async fn subtract_handler(params : Json?) -> Json raise RpcError {
   match params {
     Some(Array([Number(minuend, ..), Number(subtrahend, ..)])) =>
       Json::number(minuend - subtrahend)
-    Some(Object(obj)) =>
-      match (obj.get("minuend"), obj.get("subtrahend")) {
-        (Some(Number(minuend, ..)), Some(Number(subtrahend, ..))) =>
-          Json::number(minuend - subtrahend)
-        _ => raise invalid_params()
-      }
+    Some(
+      Object(
+        {
+          "minuend": Number(minuend, ..),
+          "subtrahend": Number(subtrahend, ..),
+          ..
+        }
+      )
+    ) => Json::number(minuend - subtrahend)
     _ => raise invalid_params()
   }
 }
@@ -76,19 +79,18 @@ async fn unavailable(_params : Json?) -> Json raise RpcError {
   raise RpcErrorWithData(
     code=-32042,
     message="Temporarily unavailable",
-    data=Json::string("retry later"),
+    data="retry later",
   )
 }
 
 ///|
-fn test_endpoint() -> Endpoint {
+fn test_endpoint() -> Endpoint raise EndpointError {
   @jsonrpc.EndpointBuilder()
   .handle("add", add_handler)
   .handle("subtract", subtract_handler)
   .handle("update", ok_null)
   .handle("unavailable", unavailable)
   .build()
-  .unwrap()
 }
 
 ///|
@@ -110,7 +112,6 @@ async test "builder registers raw and typed handlers" {
     .handle("tuple/add", typed(add_tuple))
     .handle("ping", typed(ping))
     .build()
-    .unwrap()
   let object_call =
     #|{"jsonrpc":"2.0","method":"add","params":{"left":2,"right":3},"id":1}
   let object_response = response_json(endpoint, object_call)
@@ -145,10 +146,7 @@ async test "builder registers raw and typed handlers" {
 
 ///|
 async test "typed decode failures become invalid params" {
-  let endpoint = @jsonrpc.EndpointBuilder()
-    .handle("add", typed(add))
-    .build()
-    .unwrap()
+  let endpoint = @jsonrpc.EndpointBuilder().handle("add", typed(add)).build()
   let request =
     #|{"jsonrpc":"2.0","method":"add","params":{"left":"two","right":3},"id":1}
   let response = response_json(endpoint, request)
@@ -247,9 +245,7 @@ async test "empty batch returns invalid request response" {
 ///|
 async test "outgoing request auto id and completion" {
   let endpoint = test_endpoint()
-  let request = endpoint
-    .request("remote/add", params=Json::array([Json::number(2.0)]))
-    .unwrap()
+  let request = endpoint.request("remote/add", params=[2])
   guard request is Object(obj) else { fail("request must be object") }
   guard obj.get("id") is Some(Number(1.0, ..)) else { fail("id must be 1") }
 
@@ -271,16 +267,37 @@ async test "outgoing request auto id and completion" {
 }
 
 ///|
+async test "outgoing request completes with remote error" {
+  let endpoint = test_endpoint()
+  ignore(endpoint.request("remote/unavailable"))
+  let response =
+    #|{"jsonrpc":"2.0","error":{"code":-32042,"message":"Temporarily unavailable","data":"retry later"},"id":1}
+  let result = endpoint.receive_text(response)
+  guard result.completed.length() == 1 else { fail("request must complete") }
+  let completed = result.completed[0]
+  guard completed.result
+    is Err(
+      RpcErrorWithData(
+        code=-32042,
+        message="Temporarily unavailable",
+        data=String("retry later")
+      )
+    ) else {
+    fail("completion must contain remote error")
+  }
+}
+
+///|
 test "auto id skips explicit pending numeric ids" {
   let endpoint = test_endpoint()
-  let explicit = endpoint.request("remote/explicit", id=Number(1)).unwrap()
+  let explicit = endpoint.request("remote/explicit", id=Number(1))
   guard explicit is Object(explicit_obj) else {
     fail("explicit request must be object")
   }
   guard explicit_obj.get("id") is Some(Number(1.0, ..)) else {
     fail("explicit id must be 1")
   }
-  let automatic = endpoint.request("remote/auto").unwrap()
+  let automatic = endpoint.request("remote/auto")
   guard automatic is Object(auto_obj) else {
     fail("automatic request must be object")
   }
@@ -292,12 +309,15 @@ test "auto id skips explicit pending numeric ids" {
 ///|
 test "explicit id and duplicate pending id" {
   let endpoint = test_endpoint()
-  let first = endpoint.request("remote/one", id=String("abc")).unwrap()
+  let first = endpoint.request("remote/one", id=String("abc"))
   guard first is Object(first_obj) else { fail("request must be object") }
   guard first_obj.get("id") is Some(String("abc")) else {
     fail("explicit id must be used")
   }
-  let duplicate = endpoint.request("remote/two", id=String("abc"))
+  let duplicate : Result[Json, EndpointError] = try? endpoint.request(
+    "remote/two",
+    id=String("abc"),
+  )
   guard duplicate is Err(DuplicatePendingId(String("abc"))) else {
     fail("duplicate pending id must be rejected")
   }
@@ -352,14 +372,14 @@ async test "response id null is unexpected" {
 
 ///|
 test "builder reports registration errors on build" {
-  let reserved = @jsonrpc.EndpointBuilder()
+  let reserved : Result[Endpoint, EndpointError] = try? @jsonrpc.EndpointBuilder()
     .handle("rpc.discover", ok_null)
     .build()
   guard reserved is Err(ReservedMethod("rpc.discover")) else {
     fail("reserved method must be rejected")
   }
 
-  let duplicate = @jsonrpc.EndpointBuilder()
+  let duplicate : Result[Endpoint, EndpointError] = try? @jsonrpc.EndpointBuilder()
     .handle("echo", ok_null)
     .handle("echo", ok_null)
     .build()
@@ -371,8 +391,8 @@ test "builder reports registration errors on build" {
 ///|
 test "batch helper creates json array" {
   let endpoint = test_endpoint()
-  let one = endpoint.request("one").unwrap()
-  let two = endpoint.notify("two").unwrap()
+  let one = endpoint.request("one")
+  let two = endpoint.notify("two")
   let doc = batch([one, two])
   guard doc is Array(items) else { fail("batch helper must return array") }
   guard items.length() == 2 else { fail("batch must include two messages") }

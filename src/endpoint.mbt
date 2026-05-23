@@ -26,9 +26,10 @@ fn[P : @json.FromJson] decode_params(params : Json?) -> P raise RpcError {
   let value = params.unwrap_or(null)
   @json.from_json(value) catch {
     JsonDecodeError((path, message)) => {
-      let data : Map[String, Json] = {}
-      data["path"] = path.to_json()
-      data["message"] = Json::string(message)
+      let data : Map[String, Json] = {
+        "path": path.to_json(),
+        "message": Json::string(message),
+      }
       raise RpcErrorWithData(
         code=INVALID_PARAMS_CODE,
         message="Invalid params",
@@ -39,13 +40,11 @@ fn[P : @json.FromJson] decode_params(params : Json?) -> P raise RpcError {
 }
 
 ///|
-fn validate_method_name(name : String) -> EndpointError? {
+fn validate_method_name(name : String) -> Unit raise EndpointError {
   if name == "" {
-    Some(InvalidMethod(name))
+    raise InvalidMethod(name)
   } else if name.has_prefix("rpc.") {
-    Some(ReservedMethod(name))
-  } else {
-    None
+    raise ReservedMethod(name)
   }
 }
 
@@ -57,15 +56,13 @@ pub fn EndpointBuilder::handle(
 ) -> EndpointBuilder {
   let handlers = self.handlers.copy()
   let errors = self.errors.copy()
-  if validate_method_name(name) is Some(error) {
-    errors.push(error)
-    return { handlers, errors }
+  try validate_method_name(name) catch {
+    error => errors.push(error)
+  } noraise {
+    _ if self.handlers.get(name) is Some(_) =>
+      errors.push(DuplicateMethod(name))
+    _ => handlers[name] = handler
   }
-  if self.handlers.get(name) is Some(_) {
-    errors.push(DuplicateMethod(name))
-    return { handlers, errors }
-  }
-  handlers[name] = handler
   { handlers, errors }
 }
 
@@ -73,10 +70,10 @@ pub fn EndpointBuilder::handle(
 /// Build the runtime endpoint.
 pub fn EndpointBuilder::build(
   self : EndpointBuilder,
-) -> Result[Endpoint, EndpointError] {
+) -> Endpoint raise EndpointError {
   match self.errors {
-    [error, ..] => Err(error)
-    [] => Ok({ router: self.handlers, next_id: 1, pending: {} })
+    [error, ..] => raise error
+    [] => { router: self.handlers, next_id: 1, pending: {} }
   }
 }
 
@@ -94,10 +91,11 @@ pub struct Endpoint {
 }
 
 ///|
-fn make_request_message(rpc_method : String, params : Json?, id : Id?) -> Json {
-  let obj : Map[String, Json] = {}
-  obj["jsonrpc"] = Json::string("2.0")
-  obj["method"] = Json::string(rpc_method)
+fn make_request_message(rpc_method : String, params? : Json, id? : Id) -> Json {
+  let obj : Map[String, Json] = {
+    "jsonrpc": "2.0",
+    "method": Json::string(rpc_method),
+  }
   if params is Some(value) {
     obj["params"] = value
   }
@@ -113,19 +111,17 @@ pub fn Endpoint::request(
   rpc_method : String,
   params? : Json,
   id? : Id,
-) -> Result[Json, EndpointError] {
-  if validate_method_name(rpc_method) is Some(error) {
-    return Err(error)
-  }
+) -> Json raise EndpointError {
+  validate_method_name(rpc_method)
   let request_id = match id {
     Some(value) => value
     None => self.allocate_id()
   }
-  if self.pending.get(request_id) is Some(_) {
-    return Err(DuplicatePendingId(request_id))
+  guard self.pending.get(request_id) is None else {
+    raise DuplicatePendingId(request_id)
   }
   self.pending[request_id] = { name: rpc_method }
-  Ok(make_request_message(rpc_method, params, Some(request_id)))
+  make_request_message(rpc_method, params?, id=request_id)
 }
 
 ///|
@@ -144,11 +140,9 @@ pub fn Endpoint::notify(
   _self : Endpoint,
   rpc_method : String,
   params? : Json,
-) -> Result[Json, EndpointError] {
-  if validate_method_name(rpc_method) is Some(error) {
-    return Err(error)
-  }
-  Ok(make_request_message(rpc_method, params, None))
+) -> Json raise EndpointError {
+  validate_method_name(rpc_method)
+  make_request_message(rpc_method, params?)
 }
 
 ///|
@@ -157,9 +151,9 @@ pub async fn Endpoint::receive_text(
   self : Endpoint,
   input : String,
 ) -> ReceiveResult {
-  let value = @json.parse(input) catch {
+  try @json.parse(input) catch {
     _ =>
-      return {
+      {
         outgoing: [
           unknown_id_error(
             RpcError(code=PARSE_ERROR_CODE, message="Parse error"),
@@ -168,8 +162,9 @@ pub async fn Endpoint::receive_text(
         completed: [],
         unexpected: [],
       }
+  } noraise {
+    value => self.receive_json(value)
   }
-  self.receive_json(value)
 }
 
 ///|
@@ -200,10 +195,10 @@ async fn Endpoint::receive_batch(
         RpcError(code=INVALID_REQUEST_CODE, message="Invalid Request"),
       ),
     )
-    return result
-  }
-  for item in items {
-    self.receive_one(item, result)
+  } else {
+    for item in items {
+      self.receive_one(item, result)
+    }
   }
   result
 }
@@ -227,41 +222,40 @@ async fn Endpoint::receive_request_like(
   value : Json,
   result : ReceiveResult,
 ) -> Unit {
-  let request = match parse_request(value) {
-    Ok(request) => request
-    Err(error) =>
-      return result.outgoing.push(
-        error_response(error.id.unwrap_or(null), error.error),
+  try parse_request(value) catch {
+    RequestError(error~, ..) as request_error =>
+      result.outgoing.push(error_response(request_error.response_id(), error))
+  } noraise {
+    request => self.receive_request(request, result)
+  }
+}
+
+///|
+async fn Endpoint::receive_request(
+  self : Endpoint,
+  request : Request,
+  result : ReceiveResult,
+) -> Unit {
+  let response_id = request.response_id()
+  guard self.router.get(request.rpc_method) is Some(handler) else {
+    if !request.notification {
+      result.outgoing.push(
+        error_response(
+          response_id,
+          RpcError(code=METHOD_NOT_FOUND_CODE, message="Method not found"),
+        ),
       )
+    }
   }
-  let id = request.id.unwrap_or(null)
-  let handler = match self.router.get(request.rpc_method) {
-    Some(handler) => handler
-    None =>
-      if request.notification {
-        return
-      } else {
-        return result.outgoing.push(
-          error_response(
-            id,
-            RpcError(code=METHOD_NOT_FOUND_CODE, message="Method not found"),
-          ),
-        )
+  try handler(request.params) catch {
+    error =>
+      if !request.notification {
+        result.outgoing.push(error_response(response_id, error))
       }
-  }
-  let handler_result = try? handler(request.params)
-  match handler_result {
-    Ok(json_result) =>
-      if request.notification {
-        ()
-      } else {
-        result.outgoing.push(success_response(id, json_result))
-      }
-    Err(error) =>
-      if request.notification {
-        ()
-      } else {
-        result.outgoing.push(error_response(id, error))
+  } noraise {
+    json_result =>
+      if !request.notification {
+        result.outgoing.push(success_response(response_id, json_result))
       }
   }
 }
@@ -272,9 +266,10 @@ fn Endpoint::receive_response_like(
   value : Json,
   result : ReceiveResult,
 ) -> Unit {
-  match parse_response(value) {
-    Some(response) => self.complete_response(response, value, result)
-    None => result.unexpected.push(value)
+  try @json.from_json(value) catch {
+    _ => result.unexpected.push(value)
+  } noraise {
+    response => self.complete_response(response, value, result)
   }
 }
 
@@ -285,19 +280,19 @@ fn Endpoint::complete_response(
   raw : Json,
   result : ReceiveResult,
 ) -> Unit {
-  match id_from_json(response.id) {
-    Some(id) =>
-      match self.pending.get(id) {
-        Some(pending) => {
-          self.pending.remove(id)
-          result.completed.push({
-            id,
-            method_name: pending.name,
-            result: response.result,
-          })
-        }
-        None => result.unexpected.push(raw)
+  try @json.from_json(response.id) catch {
+    _ => result.unexpected.push(raw)
+  } noraise {
+    id => {
+      guard self.pending.get(id) is Some(pending) else {
+        result.unexpected.push(raw)
       }
-    None => result.unexpected.push(raw)
+      self.pending.remove(id)
+      result.completed.push({
+        id,
+        method_name: pending.name,
+        result: response.result,
+      })
+    }
   }
 }

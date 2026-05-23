@@ -29,7 +29,6 @@ async test "handle_line" {
   let endpoint = @rpc.EndpointBuilder()
     .handle("echo", @rpc.typed(stdio_echo))
     .build()
-    .unwrap()
   let input =
     #|{"jsonrpc":"2.0","method":"echo","params":{"message":"hello"},"id":1}
   guard handle_line(endpoint, input) is Some(_) else {
