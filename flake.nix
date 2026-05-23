@@ -38,6 +38,10 @@
             src = ./.;
             moonModJson = ./moon.mod.json;
             moonRegistryIndex = inputs.moon-registry;
+            checkPhase = ''
+              cd $TMP
+              moon test --target native --release
+            '';
           };
         };
     };
