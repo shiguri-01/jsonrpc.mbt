@@ -177,6 +177,26 @@ async test "notification produces no outgoing response" {
 }
 
 ///|
+async test "notification errors are suppressed" {
+  let handler_error =
+    #|{"jsonrpc":"2.0","method":"unavailable"}
+  let handler_result = test_endpoint().receive_text(handler_error)
+  guard handler_result.outgoing.is_empty() else {
+    fail("notification handler error must not respond")
+  }
+  guard handler_result.completed.is_empty() else {
+    fail("notification handler error must not complete")
+  }
+
+  let missing_method =
+    #|{"jsonrpc":"2.0","method":"missing"}
+  let missing_result = test_endpoint().receive_text(missing_method)
+  guard missing_result.outgoing.is_empty() else {
+    fail("missing notification method must not respond")
+  }
+}
+
+///|
 async test "request id null is preserved for incoming calls" {
   let request =
     #|{"jsonrpc":"2.0","method":"add","params":[2,3],"id":null}
@@ -206,6 +226,42 @@ async test "method not found and parse errors are protocol errors" {
     fail("response must be object")
   }
   guard parse_obj.get("id") is Some(Null) else { fail("id must be null") }
+}
+
+///|
+async test "invalid request preserves valid id" {
+  let invalid_with_id =
+    #|{"jsonrpc":"2.0","params":[],"id":"x"}
+  let response = response_json(test_endpoint(), invalid_with_id)
+  assert_error_code(response, INVALID_REQUEST_CODE.to_double())
+  guard response is Object(obj) else { fail("response must be object") }
+  guard obj.get("id") is Some(String("x")) else {
+    fail("valid id must be preserved")
+  }
+}
+
+///|
+async test "invalid request with invalid id responds with null id" {
+  let invalid_id =
+    #|{"jsonrpc":"2.0","method":"add","params":[2,3],"id":[]}
+  let response = response_json(test_endpoint(), invalid_id)
+  assert_error_code(response, INVALID_REQUEST_CODE.to_double())
+  guard response is Object(obj) else { fail("response must be object") }
+  guard obj.get("id") is Some(Null) else {
+    fail("invalid id must not be preserved")
+  }
+}
+
+///|
+async test "scalar params are invalid request" {
+  let scalar_params =
+    #|{"jsonrpc":"2.0","method":"add","params":1,"id":1}
+  let response = response_json(test_endpoint(), scalar_params)
+  assert_error_code(response, INVALID_REQUEST_CODE.to_double())
+  guard response is Object(obj) else { fail("response must be object") }
+  guard obj.get("id") is Some(Number(1.0, ..)) else {
+    fail("id must be preserved for scalar params error")
+  }
 }
 
 ///|
@@ -288,6 +344,32 @@ async test "outgoing request completes with remote error" {
 }
 
 ///|
+async test "malformed remote error does not clear pending request" {
+  let endpoint = test_endpoint()
+  ignore(endpoint.request("remote/fractional"))
+
+  let malformed =
+    #|{"jsonrpc":"2.0","error":{"code":1.5,"message":"bad"},"id":1}
+  let malformed_result = endpoint.receive_text(malformed)
+  guard malformed_result.completed.is_empty() else {
+    fail("malformed response must not complete")
+  }
+  guard malformed_result.unexpected.length() == 1 else {
+    fail("malformed response must be unexpected")
+  }
+
+  let valid =
+    #|{"jsonrpc":"2.0","result":"ok","id":1}
+  let valid_result = endpoint.receive_text(valid)
+  guard valid_result.completed.length() == 1 else {
+    fail("pending request must still complete")
+  }
+  guard valid_result.completed[0].result is Ok(String("ok")) else {
+    fail("valid response must complete with result")
+  }
+}
+
+///|
 test "auto id skips explicit pending numeric ids" {
   let endpoint = test_endpoint()
   let explicit = endpoint.request("remote/explicit", id=Number(1))
@@ -320,6 +402,36 @@ test "explicit id and duplicate pending id" {
   )
   guard duplicate is Err(DuplicatePendingId(String("abc"))) else {
     fail("duplicate pending id must be rejected")
+  }
+}
+
+///|
+test "outgoing methods validate method names" {
+  let endpoint = test_endpoint()
+  let empty_request : Result[Json, EndpointError] = try? endpoint.request("")
+  guard empty_request is Err(InvalidMethod("")) else {
+    fail("empty request method must be rejected")
+  }
+
+  let reserved_request : Result[Json, EndpointError] = try? endpoint.request(
+    "rpc.discover",
+  )
+  guard reserved_request is Err(ReservedMethod("rpc.discover")) else {
+    fail("reserved request method must be rejected")
+  }
+
+  let empty_notification : Result[Json, EndpointError] = try? endpoint.notify(
+    "",
+  )
+  guard empty_notification is Err(InvalidMethod("")) else {
+    fail("empty notification method must be rejected")
+  }
+
+  let reserved_notification : Result[Json, EndpointError] = try? endpoint.notify(
+    "rpc.discover",
+  )
+  guard reserved_notification is Err(ReservedMethod("rpc.discover")) else {
+    fail("reserved notification method must be rejected")
   }
 }
 
@@ -385,6 +497,29 @@ test "builder reports registration errors on build" {
     .build()
   guard duplicate is Err(DuplicateMethod("echo")) else {
     fail("duplicate method must be rejected")
+  }
+}
+
+///|
+test "rpc error code must be an integer" {
+  let fractional : Result[RpcError, @json.JsonDecodeError] = try? @json.from_json({
+      "code": Json::number(1.5),
+      "message": Json::string("fractional code"),
+    },
+  )
+  guard fractional is Err(JsonDecodeError((path, _))) else {
+    fail("fractional error code must be rejected")
+  }
+  guard path.to_json() is String("/code") else {
+    fail("decode error path must identify code")
+  }
+
+  let valid : RpcError = @json.from_json({
+    "code": Json::number((-32042).to_double()),
+    "message": Json::string("valid code"),
+  })
+  guard valid is RpcError(code=-32042, message="valid code") else {
+    fail("integer error code must decode")
   }
 }
 

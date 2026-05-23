@@ -55,6 +55,19 @@ pub impl ToJson for RpcError with to_json(self) {
 }
 
 ///|
+fn decode_integer(
+  value : Double,
+  path : @json.JsonPath,
+  name : String,
+) -> Int raise @json.JsonDecodeError {
+  let int = value.to_int()
+  guard int.to_double() == value else {
+    raise JsonDecodeError((path, "\{name}: expected integer"))
+  }
+  int
+}
+
+///|
 pub impl @json.FromJson for RpcError with from_json(value, path) {
   match value {
     Object(
@@ -65,11 +78,19 @@ pub impl @json.FromJson for RpcError with from_json(value, path) {
         ..
       }
     ) => {
-      let code = code_value.to_int()
+      let code = decode_integer(
+        code_value,
+        path.add_key("code"),
+        "RpcError::from_json",
+      )
       RpcErrorWithData(code~, message~, data~)
     }
     Object({ "code": Number(code_value, ..), "message": String(message), .. }) => {
-      let code = code_value.to_int()
+      let code = decode_integer(
+        code_value,
+        path.add_key("code"),
+        "RpcError::from_json",
+      )
       RpcError(code~, message~)
     }
     _ =>

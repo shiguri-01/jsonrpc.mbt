@@ -41,7 +41,7 @@ async fn main {
     .handle("subtract", @rpc.typed(subtract))
     .handle("echo", @rpc.typed(echo))
     .build()
-    .unwrap()
+    catch { _ => abort("failed to build endpoint") }
 
   let request =
     #|[
@@ -50,7 +50,9 @@ async fn main {
     #|  {"jsonrpc":"2.0","method":"subtract","params":{"minuend":1,"subtrahend":2}}
     #|]
 
-  let result = endpoint.receive_text(request)
+  let result = endpoint.receive_text(request) catch {
+    _ => abort("failed to receive request")
+  }
   match result.outgoing.length() {
     0 => println("notification-only batch")
     1 => println(result.outgoing[0].stringify())

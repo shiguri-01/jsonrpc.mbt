@@ -20,15 +20,21 @@ async fn main {
   let endpoint = @rpc.EndpointBuilder()
     .handle("echo", @rpc.typed(echo))
     .build()
-    .unwrap()
+    catch { _ => abort("failed to build endpoint") }
 
-  @async_stdio.stderr.write("JSON-RPC stdio example is ready.\n")
-  @async_stdio.stderr.write("Send one JSON-RPC document per line on stdin.\n")
+  @async_stdio.stderr.write("JSON-RPC stdio example is ready.\n") catch {
+    _ => abort("failed to write usage")
+  }
+  @async_stdio.stderr.write("Send one JSON-RPC document per line on stdin.\n") catch {
+    _ => abort("failed to write usage")
+  }
   @async_stdio.stderr.write(
     (
       #|Example: {"jsonrpc":"2.0","method":"echo","params":{"message":"hello"},"id":1}
     ),
-  )
-  @async_stdio.stderr.write("\n")
-  @rpc_stdio.run_lines(endpoint)
+  ) catch {
+    _ => abort("failed to write usage")
+  }
+  @async_stdio.stderr.write("\n") catch { _ => abort("failed to write usage") }
+  @rpc_stdio.run_lines(endpoint) catch { _ => abort("stdio loop failed") }
 }

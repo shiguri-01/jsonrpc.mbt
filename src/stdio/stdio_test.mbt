@@ -39,6 +39,36 @@ async test "handle_line writes one response line for one request line" {
 }
 
 ///|
+async test "handle_line writes batch responses as one array line" {
+  let input =
+    #|[
+    #|  {"jsonrpc":"2.0","method":"echo","params":{"message":"one"},"id":1},
+    #|  {"jsonrpc":"2.0","method":"missing","id":2}
+    #|]
+  let output = handle_line(test_endpoint(), "\{input}\n")
+  guard output is Some(text) else { fail("batch must produce output") }
+  guard text.has_suffix("\n") else { fail("output must end with newline") }
+  let json = @json.parse(text.trim().to_owned()) catch {
+    _ => fail("response line must be JSON")
+  }
+  guard json is Array([Object(first), Object(second)]) else {
+    fail("batch output must be a two item array")
+  }
+  guard first.get("result") is Some(Object(result)) else {
+    fail("first response must include result")
+  }
+  guard result.get("message") is Some(String("one")) else {
+    fail("first response must preserve params")
+  }
+  guard second.get("error") is Some(Object(error)) else {
+    fail("second response must include error")
+  }
+  guard error.get("code") is Some(Number(-32601.0, ..)) else {
+    fail("second response must be method not found")
+  }
+}
+
+///|
 async test "handle_line writes one error line for malformed json" {
   let output = handle_line(test_endpoint(), "{\"jsonrpc\":\n")
   guard output is Some(text) else { fail("parse error must produce output") }
