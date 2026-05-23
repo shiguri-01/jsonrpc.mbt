@@ -13,6 +13,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: DeterminateSystems/nix-installer-action@v17
+        with:
+          github-token: ''
       - name: Check flake
         run: nix flake check
       - name: Build package
