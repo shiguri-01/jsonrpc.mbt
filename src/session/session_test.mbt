@@ -1,5 +1,5 @@
 ///|
-#warnings("-67-24")
+#warnings("-unused_async-unused_error_type")
 async fn echo(params : Json?) -> Json raise @rpc.RpcError {
   params.unwrap_or(null)
 }

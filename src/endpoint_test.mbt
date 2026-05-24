@@ -1,5 +1,5 @@
 ///|
-#warnings("-67")
+#warnings("-unused_async")
 async fn response_json(endpoint : Endpoint, input : String) -> Json {
   let result = endpoint.receive_text(input)
   guard result.outgoing is [response] else {
@@ -9,7 +9,7 @@ async fn response_json(endpoint : Endpoint, input : String) -> Json {
 }
 
 ///|
-#warnings("-73")
+#warnings("-unnecessary_annotation")
 struct AddParams {
   left : Int
   right : Int
@@ -21,26 +21,26 @@ struct AddResult {
 } derive(ToJson)
 
 ///|
-#warnings("-67-24")
+#warnings("-unused_async-unused_error_type")
 async fn add(params : AddParams) -> AddResult raise RpcError {
   { value: params.left + params.right }
 }
 
 ///|
-#warnings("-67-24")
+#warnings("-unused_async-unused_error_type")
 async fn add_tuple(params : (Int, Int)) -> Int raise RpcError {
   let (left, right) = params
   left + right
 }
 
 ///|
-#warnings("-67-24")
+#warnings("-unused_async-unused_error_type")
 async fn ping(_params : Unit) -> String raise RpcError {
   "pong"
 }
 
 ///|
-#warnings("-67")
+#warnings("-unused_async")
 async fn add_handler(params : Json?) -> Json raise RpcError {
   match params {
     Some(Array([Number(a, ..), Number(b, ..)])) => Json::number(a + b)
@@ -49,7 +49,7 @@ async fn add_handler(params : Json?) -> Json raise RpcError {
 }
 
 ///|
-#warnings("-67")
+#warnings("-unused_async")
 async fn subtract_handler(params : Json?) -> Json raise RpcError {
   match params {
     Some(Array([Number(minuend, ..), Number(subtrahend, ..)])) =>
@@ -68,13 +68,13 @@ async fn subtract_handler(params : Json?) -> Json raise RpcError {
 }
 
 ///|
-#warnings("-67-24")
+#warnings("-unused_async-unused_error_type")
 async fn ok_null(_params : Json?) -> Json raise RpcError {
   null
 }
 
 ///|
-#warnings("-67")
+#warnings("-unused_async")
 async fn unavailable(_params : Json?) -> Json raise RpcError {
   raise RpcErrorWithData(
     code=-32042,

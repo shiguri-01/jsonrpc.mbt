@@ -1,5 +1,5 @@
 ///|
-#warnings("-73")
+#warnings("-unnecessary_annotation")
 struct EchoParams {
   message : String
 } derive(FromJson)
@@ -10,7 +10,7 @@ struct EchoResult {
 } derive(ToJson)
 
 ///|
-#warnings("-67-24")
+#warnings("-unused_async-unused_error_type")
 async fn echo(params : EchoParams) -> EchoResult raise @rpc.RpcError {
   { message: params.message }
 }

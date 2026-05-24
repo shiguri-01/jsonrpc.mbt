@@ -6,7 +6,7 @@
 
 ```mbt check
 ///|
-#warnings("-73")
+#warnings("-unnecessary_annotation")
 struct StdioEchoParams {
   message : String
 } derive(FromJson)
@@ -17,7 +17,7 @@ struct StdioEchoResult {
 } derive(ToJson)
 
 ///|
-#warnings("-67-24")
+#warnings("-unused_async-unused_error_type")
 async fn stdio_echo(
   params : StdioEchoParams,
 ) -> StdioEchoResult raise @rpc.RpcError {

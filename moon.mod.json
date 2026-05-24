@@ -1,7 +1,7 @@
 {
   "name": "shiguri-01/jsonrpc",
   "version": "0.2.0",
-  "readme": "src/README.mbt.md",
+  "readme": "README.mbt.md",
   "repository": "https://github.com/shiguri-01/jsonrpc.mbt",
   "license": "Apache-2.0",
   "keywords": ["json-rpc", "jsonrpc", "rpc", "endpoint"],

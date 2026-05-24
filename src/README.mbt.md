@@ -1,6 +1,6 @@
-# shiguri-01/jsonrpc
+# Core Endpoint
 
-A small JSON-RPC 2.0 endpoint library for MoonBit.
+`shiguri-01/jsonrpc` is the core JSON-RPC 2.0 endpoint package.
 
 The core package works with complete JSON-RPC messages. Transports such as
 stdio, WebSocket, and HTTP stay outside the core.
@@ -9,7 +9,7 @@ stdio, WebSocket, and HTTP stay outside the core.
 
 ```mbt check
 ///|
-#warnings("-73")
+#warnings("-unnecessary_annotation")
 struct EchoParams {
   message : String
 } derive(FromJson)
@@ -20,7 +20,7 @@ struct EchoResult {
 } derive(ToJson)
 
 ///|
-#warnings("-67-24")
+#warnings("-unused_async-unused_error_type")
 async fn echo(params : EchoParams) -> EchoResult raise @jsonrpc.RpcError {
   { message: params.message }
 }
@@ -60,7 +60,7 @@ struct Config {
 }
 
 ///|
-#warnings("-67")
+#warnings("-unused_async")
 async fn greet(config : Config, params : Json?) -> Json raise @jsonrpc.RpcError {
   guard params is Some(Object({ "name": String(name), .. })) else {
     raise @jsonrpc.invalid_params()
@@ -83,12 +83,6 @@ pub fn configured_usage() -> Unit raise @jsonrpc.EndpointError {
 }
 ```
 
-## Packages
-
-- `shiguri-01/jsonrpc`: core endpoint
-- `shiguri-01/jsonrpc/session`: optional transport-neutral session helper
-- `shiguri-01/jsonrpc/stdio`: native-only stdin/stdout transport
-
-See [examples/README.mbt.md](examples/README.mbt.md) for runnable examples.
+See [../examples/README.mbt.md](../examples/README.mbt.md) for runnable examples.
 
 Spec: <https://www.jsonrpc.org/specification>

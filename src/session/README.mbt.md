@@ -7,7 +7,7 @@ can frame and write.
 
 ```mbt check
 ///|
-#warnings("-67-24")
+#warnings("-unused_async-unused_error_type")
 async fn session_echo(params : Json?) -> Json raise @rpc.RpcError {
   params.unwrap_or(null)
 }
