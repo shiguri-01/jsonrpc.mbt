@@ -86,6 +86,7 @@ pub fn configured_usage() -> Unit raise @jsonrpc.EndpointError {
 ## Packages
 
 - `shiguri-01/jsonrpc`: core endpoint
+- `shiguri-01/jsonrpc/session`: optional transport-neutral session helper
 - `shiguri-01/jsonrpc/stdio`: native-only stdin/stdout transport
 
 See [examples/README.mbt.md](examples/README.mbt.md) for runnable examples.

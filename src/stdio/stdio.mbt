@@ -1,13 +1,4 @@
 ///|
-fn stringify_outgoing(outgoing : Array[Json]) -> String? {
-  match outgoing {
-    [] => None
-    [item] => Some(item.stringify())
-    items => Some(Json::array(items).stringify())
-  }
-}
-
-///|
 /// Handle one newline-delimited JSON-RPC input line.
 ///
 /// Empty or whitespace-only lines produce no output. Non-empty lines are
@@ -16,8 +7,8 @@ fn stringify_outgoing(outgoing : Array[Json]) -> String? {
 pub async fn handle_line(endpoint : @rpc.Endpoint, line : String) -> String? {
   let request = line.trim().to_owned()
   guard request != "" else { None }
-  let result = endpoint.receive_text(request)
-  stringify_outgoing(result.outgoing).map(response => "\{response}\n")
+  let turn = @session.Session(endpoint).receive_text(request)
+  turn.response_text().map(response => "\{response}\n")
 }
 
 ///|

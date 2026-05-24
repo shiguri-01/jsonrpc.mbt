@@ -1,0 +1,8 @@
+import {
+  "moonbitlang/core/json",
+  "shiguri-01/jsonrpc" @rpc,
+}
+
+import {
+  "moonbitlang/async",
+} for "test"

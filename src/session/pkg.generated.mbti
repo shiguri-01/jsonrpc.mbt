@@ -1,0 +1,37 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "shiguri-01/jsonrpc/session"
+
+import {
+  "moonbitlang/core/debug",
+  "shiguri-01/jsonrpc",
+}
+
+// Values
+
+// Errors
+
+// Types and methods
+pub struct Session {
+  // private fields
+}
+pub fn Session::Session(@jsonrpc.Endpoint) -> Self
+pub fn Session::endpoint(Self) -> @jsonrpc.Endpoint
+pub fn Session::notify(Self, String, params? : Json) -> Json raise @jsonrpc.EndpointError
+pub async fn Session::receive_json(Self, Json) -> Turn
+pub async fn Session::receive_text(Self, String) -> Turn
+pub fn Session::request(Self, String, params? : Json, id? : @jsonrpc.Id) -> Json raise @jsonrpc.EndpointError
+
+pub struct Turn {
+  // private fields
+} derive(Eq, @debug.Debug)
+pub fn Turn::completed(Self) -> Array[@jsonrpc.CompletedRequest]
+pub fn Turn::outgoing(Self) -> Array[Json]
+pub fn Turn::response_json(Self) -> Json?
+pub fn Turn::response_text(Self) -> String?
+pub fn Turn::result(Self) -> @jsonrpc.ReceiveResult
+pub fn Turn::unexpected(Self) -> Array[Json]
+
+// Type aliases
+
+// Traits
+
