@@ -31,7 +31,9 @@
           devShells.default = pkgs.mkShell {
             packages = [
               pkgs.moonbit-bin.moonbit.latest
+              pkgs.nodejs
             ];
+            MOON_NODE_OVERRIDE = "${pkgs.nodejs}/bin/node";
           };
 
           packages.default = pkgs.moonPlatform.buildMoonPackage {
