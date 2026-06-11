@@ -21,10 +21,10 @@ jobs:
       - name: Build package
         run: nix build .
       - name: Update MoonBit registry
-        run: nix run github:moonbit-community/moonbit-overlay#moon -- update
+        run: nix develop -c moon update
       - name: Check MoonBit
-        run: nix run github:moonbit-community/moonbit-overlay#moon -- check --warn-list +73
+        run: nix develop -c moon check --warn-list +73
       - name: Test MoonBit
-        run: nix run github:moonbit-community/moonbit-overlay#moon -- test
+        run: nix develop -c moon test
       - name: Check native stdio package
-        run: nix run github:moonbit-community/moonbit-overlay#moon -- check --target native --warn-list +73
+        run: nix develop -c moon check --target native --warn-list +73

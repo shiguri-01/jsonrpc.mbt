@@ -39,7 +39,7 @@ pub fn internal_error(message? : String = "Internal error") -> RpcError {
 
 ///|
 /// Convert an error to the JSON-RPC error object shape.
-pub impl ToJson for RpcError with to_json(self) {
+pub impl ToJson for RpcError with fn to_json(self) {
   let (code, message, data) = match self {
     RpcError(code~, message~) => (code, message, None)
     RpcErrorWithData(code~, message~, data~) => (code, message, Some(data))
@@ -68,7 +68,7 @@ fn decode_integer(
 }
 
 ///|
-pub impl @json.FromJson for RpcError with from_json(value, path) {
+pub impl @json.FromJson for RpcError with fn from_json(value, path) {
   match value {
     Object(
       {
@@ -101,6 +101,7 @@ pub impl @json.FromJson for RpcError with from_json(value, path) {
 }
 
 ///|
+/// Error raised while constructing local requests or endpoint method tables.
 pub(all) suberror EndpointError {
   DuplicatePendingId(Id)
   DuplicateMethod(String)

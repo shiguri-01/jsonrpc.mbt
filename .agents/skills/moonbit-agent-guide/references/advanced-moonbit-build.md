@@ -1,10 +1,10 @@
 ## Conditional Compilation
 
-Target specific backends/modes in `moon.pkg.json`:
+Target specific backends/modes in `moon.pkg`:
 
-```json
-{
-  "targets": {
+```
+options(
+  targets: {
     "wasm_only.mbt": ["wasm"],
     "js_only.mbt": ["js"],
     "debug_only.mbt": ["debug"],
@@ -12,7 +12,7 @@ Target specific backends/modes in `moon.pkg.json`:
     "not_js.mbt": ["not", "js"], // for nonjs backend
     "complex.mbt": ["or", ["and", "wasm", "release"], ["and", "js", "debug"]] // more complex conditions
   }
-}
+)
 ```
 
 **Available conditions:**
@@ -25,11 +25,17 @@ Target specific backends/modes in `moon.pkg.json`:
 
 ### Basic Linking
 
-```json
-{
-  "link": true, // Enable linking for this package
-  // OR for advanced cases:
-  "link": {
+```
+options(
+  link: true, // Enable linking for this package
+)
+```
+
+For advanced cases:
+
+```
+options(
+  link: {
     "wasm": {
       "exports": ["hello", "foo:bar"], // Export functions
       "heap-start-address": 1024, // Memory layout
@@ -55,17 +61,15 @@ Target specific backends/modes in `moon.pkg.json`:
       "cc-link-flags": "-s" // Link flags
     }
   }
-}
+)
 ```
 
 ## Warning Control
 
-Disable specific warnings in `moon.mod.json` or `moon.pkg.json`:
+Disable specific warnings in `moon.mod` or `moon.pkg`:
 
-```json
-{
-  "warn-list": "-2-29" // Disable unused variable (2) & unused package (29)
-}
+```
+warnings = "-2-29" // Disable unused variable (2) & unused package (29)
 ```
 
 **Common warning numbers:**
@@ -76,23 +80,15 @@ Disable specific warnings in `moon.mod.json` or `moon.pkg.json`:
 - `12` - Unreachable code
 - `29` - Unused package
 
-Use `moonc build-package -warn-help` to see all available warnings.
+Use `moonc check -warn-help` to see all available warnings.
 
-## Pre-build Commands
+## Dev Build Commands
 
 Embed external files as MoonBit code:
 
-```json
-{
-  "pre-build": [
-    {
-      "input": "data.txt",
-      "output": "embedded.mbt",
-      "command": ":embed -i $input -o $output --name data --text"
-    },
-    ... // more embed commands
-  ]
-}
+```
+rule(name: "embed", command: ":embed -i $input -o $output --name data --text")
+dev_build(rule: "embed", input: "data.txt", output: "embedded.mbt")
 ```
 
 Generated code example:

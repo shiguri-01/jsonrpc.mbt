@@ -14,7 +14,7 @@ pub(all) enum Id {
 } derive(Eq, Hash, Debug)
 
 ///|
-pub impl ToJson for Id with to_json(self) {
+pub impl ToJson for Id with fn to_json(self) {
   match self {
     String(value) => Json::string(value)
     Number(value) => Json::number(value.to_double())
@@ -22,7 +22,7 @@ pub impl ToJson for Id with to_json(self) {
 }
 
 ///|
-pub impl @json.FromJson for Id with from_json(value, path) {
+pub impl @json.FromJson for Id with fn from_json(value, path) {
   match value {
     String(value) => String(value)
     Number(value, ..) => {
@@ -149,7 +149,7 @@ struct Response {
 } derive(Eq, Debug)
 
 ///|
-impl ToJson for Response with to_json(self) {
+impl ToJson for Response with fn to_json(self) {
   let obj : Map[String, Json] = { "jsonrpc": "2.0", "id": self.id }
   match self.result {
     Ok(result) => obj["result"] = result
@@ -159,7 +159,7 @@ impl ToJson for Response with to_json(self) {
 }
 
 ///|
-impl @json.FromJson for Response with from_json(value, path) {
+impl @json.FromJson for Response with fn from_json(value, path) {
   match value {
     Object({ "jsonrpc": String("2.0"), "id": _, "result": _, "error": _, .. }) =>
       raise JsonDecodeError(
@@ -179,6 +179,7 @@ impl @json.FromJson for Response with from_json(value, path) {
 }
 
 ///|
+/// Result for a locally issued request completed by an incoming response.
 pub(all) struct CompletedRequest {
   id : Id
   method_name : String
@@ -186,6 +187,11 @@ pub(all) struct CompletedRequest {
 } derive(Eq, Debug)
 
 ///|
+/// Result of receiving one JSON-RPC document.
+///
+/// `outgoing` contains response documents to send, `completed` contains local
+/// requests matched by responses, and `unexpected` contains response-like
+/// documents that did not match any pending request.
 pub(all) struct ReceiveResult {
   outgoing : Array[Json]
   completed : Array[CompletedRequest]
@@ -198,6 +204,7 @@ fn ReceiveResult::ReceiveResult() -> ReceiveResult {
 }
 
 ///|
+/// Create a JSON-RPC batch document from request or response documents.
 pub fn batch(items : Array[Json]) -> Json {
   Json::array(items)
 }

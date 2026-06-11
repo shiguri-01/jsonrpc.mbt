@@ -12,6 +12,11 @@ pub fn EndpointBuilder::EndpointBuilder() -> EndpointBuilder {
 }
 
 ///|
+/// Convert a typed async MoonBit function into a low-level JSON-RPC handler.
+///
+/// The generated handler decodes `params` as `P`, calls `run`, and converts
+/// the result to JSON. Parameter decode failures are reported as
+/// `RpcErrorWithData` with JSON-RPC `INVALID_PARAMS_CODE`.
 pub fn[P : @json.FromJson, R : ToJson] typed(
   run : async (P) -> R raise RpcError,
 ) -> Handler {
@@ -49,6 +54,10 @@ fn validate_method_name(name : String) -> Unit raise EndpointError {
 }
 
 ///|
+/// Register a method handler on the builder.
+///
+/// Validation errors are accumulated and reported by `build`, so calls can be
+/// chained while preserving all registration attempts.
 pub fn EndpointBuilder::handle(
   self : EndpointBuilder,
   name : String,
@@ -106,6 +115,10 @@ fn make_request_message(rpc_method : String, params? : Json, id? : Id) -> Json {
 }
 
 ///|
+/// Create a JSON-RPC request and register its id as pending.
+///
+/// If `id` is omitted, the endpoint allocates an integer id. The returned JSON
+/// value is the request document to send through a transport.
 pub fn Endpoint::request(
   self : Endpoint,
   rpc_method : String,
@@ -136,6 +149,10 @@ fn Endpoint::allocate_id(self : Endpoint) -> Id {
 }
 
 ///|
+/// Create a JSON-RPC notification document.
+///
+/// Notifications do not allocate an id and cannot produce a completed local
+/// request.
 pub fn Endpoint::notify(
   _self : Endpoint,
   rpc_method : String,

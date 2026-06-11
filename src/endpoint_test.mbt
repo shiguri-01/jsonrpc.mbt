@@ -396,42 +396,43 @@ test "explicit id and duplicate pending id" {
   guard first_obj.get("id") is Some(String("abc")) else {
     fail("explicit id must be used")
   }
-  let duplicate : Result[Json, EndpointError] = try? endpoint.request(
-    "remote/two",
-    id=String("abc"),
-  )
-  guard duplicate is Err(DuplicatePendingId(String("abc"))) else {
-    fail("duplicate pending id must be rejected")
+  try endpoint.request("remote/two", id=String("abc")) catch {
+    DuplicatePendingId(String("abc")) => ()
+    _ => fail("duplicate pending id must be rejected")
+  } noraise {
+    _ => fail("duplicate pending id must be rejected")
   }
 }
 
 ///|
 test "outgoing methods validate method names" {
   let endpoint = test_endpoint()
-  let empty_request : Result[Json, EndpointError] = try? endpoint.request("")
-  guard empty_request is Err(InvalidMethod("")) else {
-    fail("empty request method must be rejected")
+  try endpoint.request("") catch {
+    InvalidMethod("") => ()
+    _ => fail("empty request method must be rejected")
+  } noraise {
+    _ => fail("empty request method must be rejected")
   }
 
-  let reserved_request : Result[Json, EndpointError] = try? endpoint.request(
-    "rpc.discover",
-  )
-  guard reserved_request is Err(ReservedMethod("rpc.discover")) else {
-    fail("reserved request method must be rejected")
+  try endpoint.request("rpc.discover") catch {
+    ReservedMethod("rpc.discover") => ()
+    _ => fail("reserved request method must be rejected")
+  } noraise {
+    _ => fail("reserved request method must be rejected")
   }
 
-  let empty_notification : Result[Json, EndpointError] = try? endpoint.notify(
-    "",
-  )
-  guard empty_notification is Err(InvalidMethod("")) else {
-    fail("empty notification method must be rejected")
+  try endpoint.notify("") catch {
+    InvalidMethod("") => ()
+    _ => fail("empty notification method must be rejected")
+  } noraise {
+    _ => fail("empty notification method must be rejected")
   }
 
-  let reserved_notification : Result[Json, EndpointError] = try? endpoint.notify(
-    "rpc.discover",
-  )
-  guard reserved_notification is Err(ReservedMethod("rpc.discover")) else {
-    fail("reserved notification method must be rejected")
+  try endpoint.notify("rpc.discover") catch {
+    ReservedMethod("rpc.discover") => ()
+    _ => fail("reserved notification method must be rejected")
+  } noraise {
+    _ => fail("reserved notification method must be rejected")
   }
 }
 
@@ -484,34 +485,42 @@ async test "response id null is unexpected" {
 
 ///|
 test "builder reports registration errors on build" {
-  let reserved : Result[Endpoint, EndpointError] = try? @jsonrpc.EndpointBuilder()
-    .handle("rpc.discover", ok_null)
-    .build()
-  guard reserved is Err(ReservedMethod("rpc.discover")) else {
-    fail("reserved method must be rejected")
+  try @jsonrpc.EndpointBuilder().handle("rpc.discover", ok_null).build() catch {
+    ReservedMethod("rpc.discover") => ()
+    _ => fail("reserved method must be rejected")
+  } noraise {
+    _ => fail("reserved method must be rejected")
   }
 
-  let duplicate : Result[Endpoint, EndpointError] = try? @jsonrpc.EndpointBuilder()
+  try
+    @jsonrpc.EndpointBuilder()
     .handle("echo", ok_null)
     .handle("echo", ok_null)
     .build()
-  guard duplicate is Err(DuplicateMethod("echo")) else {
-    fail("duplicate method must be rejected")
+  catch {
+    DuplicateMethod("echo") => ()
+    _ => fail("duplicate method must be rejected")
+  } noraise {
+    _ => fail("duplicate method must be rejected")
   }
 }
 
 ///|
 test "rpc error code must be an integer" {
-  let fractional : Result[RpcError, @json.JsonDecodeError] = try? @json.from_json({
-      "code": Json::number(1.5),
-      "message": Json::string("fractional code"),
-    },
-  )
-  guard fractional is Err(JsonDecodeError((path, _))) else {
-    fail("fractional error code must be rejected")
-  }
-  guard path.to_json() is String("/code") else {
-    fail("decode error path must identify code")
+  try
+    (
+      @json.from_json({
+        "code": Json::number(1.5),
+        "message": Json::string("fractional code"),
+      }) : RpcError)
+  catch {
+    JsonDecodeError((path, _)) => {
+      guard path.to_json() is String("/code") else {
+        fail("decode error path must identify code")
+      }
+    }
+  } noraise {
+    _ => fail("fractional error code must be rejected")
   }
 
   let valid : RpcError = @json.from_json({

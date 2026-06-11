@@ -13,6 +13,7 @@ async fn session_echo(params : Json?) -> Json raise @rpc.RpcError {
 }
 
 ///|
+/// Demonstrate receiving one document through a session.
 pub async fn session_usage() -> Unit {
   let endpoint = @rpc.EndpointBuilder().handle("echo", session_echo).build()
   let session = @session.Session(endpoint)

@@ -40,8 +40,9 @@ async fn main {
   let endpoint = @rpc.EndpointBuilder()
     .handle("subtract", @rpc.typed(subtract))
     .handle("echo", @rpc.typed(echo))
-    .build()
-    catch { _ => abort("failed to build endpoint") }
+    .build() catch {
+      _ => abort("failed to build endpoint")
+    }
 
   let request =
     #|[

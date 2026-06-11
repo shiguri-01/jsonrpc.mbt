@@ -17,10 +17,9 @@ async fn echo(params : EchoParams) -> EchoResult raise @rpc.RpcError {
 
 ///|
 async fn main {
-  let endpoint = @rpc.EndpointBuilder()
-    .handle("echo", @rpc.typed(echo))
-    .build()
-    catch { _ => abort("failed to build endpoint") }
+  let endpoint = @rpc.EndpointBuilder().handle("echo", @rpc.typed(echo)).build() catch {
+      _ => abort("failed to build endpoint")
+    }
 
   @async_stdio.stderr.write("JSON-RPC stdio example is ready.\n") catch {
     _ => abort("failed to write usage")
@@ -35,6 +34,10 @@ async fn main {
   ) catch {
     _ => abort("failed to write usage")
   }
-  @async_stdio.stderr.write("\n") catch { _ => abort("failed to write usage") }
-  @rpc_stdio.run_lines(endpoint) catch { _ => abort("stdio loop failed") }
+  @async_stdio.stderr.write("\n") catch {
+    _ => abort("failed to write usage")
+  }
+  @rpc_stdio.run_lines(endpoint) catch {
+    _ => abort("stdio loop failed")
+  }
 }

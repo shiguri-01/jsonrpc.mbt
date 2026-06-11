@@ -26,6 +26,7 @@ async fn echo(params : EchoParams) -> EchoResult raise @jsonrpc.RpcError {
 }
 
 ///|
+/// Demonstrate building an endpoint and creating JSON-RPC documents.
 pub async fn usage() -> Unit {
   let endpoint = @jsonrpc.EndpointBuilder()
     .handle("echo", @jsonrpc.typed(echo))
@@ -69,6 +70,7 @@ async fn greet(config : Config, params : Json?) -> Json raise @jsonrpc.RpcError 
 }
 
 ///|
+/// Demonstrate capturing application configuration in a handler.
 pub fn configured_usage() -> Unit raise @jsonrpc.EndpointError {
   let config : Config = { prefix: "hello" }
 

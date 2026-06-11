@@ -38,11 +38,25 @@
 
           packages.default = pkgs.moonPlatform.buildMoonPackage {
             src = ./.;
-            moonModJson = ./moon.mod.json;
+            moonModJson = ./nix/moon.mod.json;
             moonRegistryIndex = inputs.moon-registry;
+            moonTarget = "wasm-gc";
+            buildPhase = ''
+              cd $TMP
+              chmod -R u+w $TMP
+
+              writable_home=$TMPDIR/moon_home
+              cp -rL $MOON_HOME $writable_home
+              chmod -R u+w $writable_home
+              export MOON_HOME=$writable_home
+              export HOME=$TMPDIR
+
+              moon build src --target wasm-gc --release
+            '';
             checkPhase = ''
               cd $TMP
-              moon test --target native --release
+              chmod -R u+w $TMP
+              moon test src --target wasm-gc --release
             '';
           };
         };

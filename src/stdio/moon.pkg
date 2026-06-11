@@ -1,11 +1,11 @@
 import {
   "moonbitlang/async/stdio" @async_stdio,
   "shiguri-01/jsonrpc" @rpc,
-  "shiguri-01/jsonrpc/session" @session,
+  "shiguri-01/jsonrpc/session",
 }
 
 import {
-  "moonbitlang/core/json" @json,
+  "moonbitlang/core/json",
   "moonbitlang/async",
 } for "test"
 
