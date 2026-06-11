@@ -4,7 +4,7 @@ version = "0.1.0"
 
 import {
   "moonbitlang/async@0.19.3",
-  "shiguri-01/jsonrpc@0.2.0",
+  "shiguri-01/jsonrpc@0.3.0",
 }
 
 preferred_target = "native"

@@ -1,6 +1,6 @@
 name = "shiguri-01/jsonrpc"
 
-version = "0.2.0"
+version = "0.3.0"
 
 import {
   "moonbitlang/async@0.19.3",
@@ -12,7 +12,7 @@ repository = "https://github.com/shiguri-01/jsonrpc.mbt"
 
 license = "Apache-2.0"
 
-keywords = [ "json-rpc", "jsonrpc", "rpc", "endpoint" ]
+keywords = [ "json-rpc", "json-rpc2", "jsonrpc", "jsonrpc2" ]
 
 description = "A small, transport-agnostic JSON-RPC 2.0 endpoint library."
 
